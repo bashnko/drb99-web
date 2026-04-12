@@ -9,18 +9,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 
 const PLATFORMS = [
-  { id: "linux", label: "Linux" },
-  { id: "darwin", label: "macOS" },
-  { id: "windows", label: "Windows" },
 ];
 
 export interface GoReleaseFormData {
   repoUrl: string;
   binaryName: string;
+
   packageName: string;
   description: string;
   author: string;
   platforms: string[];
+
   notes: string;
 }
 
@@ -46,7 +45,7 @@ export function GoReleaseForm({ data, onChange }: GoReleaseFormProps) {
 
   return (
     <div className="space-y-8">
-      {/* Main Settings */}
+
       <div className="grid gap-6 sm:grid-cols-2">
         <div className="space-y-2.5">
           <Label htmlFor="go-repo-url">Repository URL</Label>
@@ -63,18 +62,13 @@ export function GoReleaseForm({ data, onChange }: GoReleaseFormProps) {
             id="go-binary-name"
             placeholder="mytool"
             value={data.binaryName}
-            onChange={(e) => {
-              update("binaryName", e.target.value);
-              update("packageName", e.target.value); // Sync automatically
-            }}
+
           />
         </div>
       </div>
 
       <Separator />
 
-      {/* Description & Author (Commented out for now) */}
-      {/* 
       <div className="grid gap-6 sm:grid-cols-2">
         <div className="space-y-2.5">
           <Label htmlFor="go-description">Description</Label>
@@ -95,7 +89,6 @@ export function GoReleaseForm({ data, onChange }: GoReleaseFormProps) {
           />
         </div>
       </div>
-      */}
 
       {/* Platforms */}
       <div className="space-y-3">
@@ -130,10 +123,6 @@ export function GoReleaseForm({ data, onChange }: GoReleaseFormProps) {
           })}
         </div>
       </div>
-
-      {/* Output mode section removed as requested */}
-
-      {/* Notes section removed as requested */}
     </div>
   );
 }
@@ -141,6 +130,7 @@ export function GoReleaseForm({ data, onChange }: GoReleaseFormProps) {
 export const INITIAL_GO_RELEASE_DATA: GoReleaseFormData = {
   repoUrl: "",
   binaryName: "",
+
   packageName: "",
   description: "",
   author: "",
