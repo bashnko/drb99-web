@@ -3,22 +3,32 @@
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectOption } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 
+const PLATFORMS = [
+  { id: "linux", label: "Linux" },
+  { id: "darwin", label: "macOS" },
+  { id: "windows", label: "Windows" },
+];
+
 export interface NpmWrapperFormData {
-  packageName: string;
+  repoUrl: string;
   cliCommandName: string;
-  binarySourceUrl: string;
+  packageName: string;
   version: string;
-  installDirectory: string;
-  platformTarget: string;
-  postInstallScript: string;
-  postInstallEnabled: boolean;
-  description: string;
-  notes: string;
+  platforms: string[];
+  assetUrls: Record<string, string>;
 }
+
+export const INITIAL_NPM_WRAPPER_DATA: NpmWrapperFormData = {
+  repoUrl: "",
+  cliCommandName: "",
+  packageName: "",
+  version: "",
+  platforms: [],
+  assetUrls: {},
+};
 
 interface NpmWrapperFormProps {
   data: NpmWrapperFormData;
@@ -33,39 +43,53 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
     onChange({ ...data, [key]: value });
   };
 
+  const togglePlatform = (platformId: string, checked: boolean) => {
+    const nextPlatforms = checked
+      ? [...new Set([...data.platforms, platformId])]
+      : data.platforms.filter((p) => p !== platformId);
+    
+    // Only keep URLs for checked platforms
+    const nextAssetUrls = { ...data.assetUrls };
+    if (!checked) {
+      delete nextAssetUrls[platformId];
+    } else if (!nextAssetUrls[platformId]) {
+        nextAssetUrls[platformId] = "";
+    }
+
+    onChange({
+      ...data,
+      platforms: nextPlatforms,
+      assetUrls: nextAssetUrls,
+    });
+  };
+
+  const updateAssetUrl = (platformId: string, url: string) => {
+    update("assetUrls", { ...data.assetUrls, [platformId]: url });
+  };
+
   return (
     <div className="space-y-8">
-      {/* Row 1 */}
-      <div className="grid gap-6 sm:grid-cols-2">
+      {/* Main Settings */}
+      <div className="grid gap-6 sm:grid-cols-3">
         <div className="space-y-2.5">
-          <Label htmlFor="npm-package-name">Package Name</Label>
+          <Label htmlFor="npm-repo-url">Repository URL</Label>
           <Input
-            id="npm-package-name"
-            placeholder="@scope/cli-wrapper"
-            value={data.packageName}
-            onChange={(e) => update("packageName", e.target.value)}
+            id="npm-repo-url"
+            placeholder="github.com/user/repo"
+            value={data.repoUrl || ""}
+            onChange={(e) => update("repoUrl", e.target.value)}
           />
         </div>
         <div className="space-y-2.5">
-          <Label htmlFor="npm-cli-command">CLI Command Name</Label>
+          <Label htmlFor="npm-cli-command">Binary Name</Label>
           <Input
             id="npm-cli-command"
             placeholder="mytool"
             value={data.cliCommandName}
-            onChange={(e) => update("cliCommandName", e.target.value)}
-          />
-        </div>
-      </div>
-
-      {/* Row 2 */}
-      <div className="grid gap-6 sm:grid-cols-2">
-        <div className="space-y-2.5">
-          <Label htmlFor="npm-binary-url">Binary Source URL</Label>
-          <Input
-            id="npm-binary-url"
-            placeholder="https://github.com/user/repo/releases/download/..."
-            value={data.binarySourceUrl}
-            onChange={(e) => update("binarySourceUrl", e.target.value)}
+            onChange={(e) => {
+              update("cliCommandName", e.target.value);
+              update("packageName", e.target.value);
+            }}
           />
         </div>
         <div className="space-y-2.5">
@@ -81,109 +105,72 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
 
       <Separator />
 
-      {/* Row 3 */}
-      <div className="grid gap-6 sm:grid-cols-2">
-        <div className="space-y-2.5">
-          <Label htmlFor="npm-install-dir">Install Directory</Label>
-          <Input
-            id="npm-install-dir"
-            placeholder="/usr/local/bin"
-            value={data.installDirectory}
-            onChange={(e) => update("installDirectory", e.target.value)}
-          />
+      {/* Platforms Settings */}
+      <div className="space-y-6">
+        <div className="space-y-3">
+          <Label>Target Platforms</Label>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {PLATFORMS.map((platform) => {
+              const isChecked = data.platforms.includes(platform.id);
+              return (
+                <div
+                  key={platform.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => togglePlatform(platform.id, !isChecked)}
+                  onKeyDown={(e) => {
+                    if (e.key === " " || e.key === "Enter") {
+                      e.preventDefault();
+                      togglePlatform(platform.id, !isChecked);
+                    }
+                  }}
+                  className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3.5 py-3 transition-colors ${
+                    isChecked
+                      ? "border-white/20 bg-white/[0.06]"
+                      : "border-white/[0.08] bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <Checkbox
+                    id={`npm-platform-${platform.id}`}
+                    checked={isChecked}
+                    onCheckedChange={(checked) =>
+                      togglePlatform(platform.id, !!checked)
+                    }
+                  />
+                  <span className="text-sm text-zinc-300">{platform.label}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div className="space-y-2.5">
-          <Label htmlFor="npm-platform-target">Platform Target</Label>
-          <Select
-            value={data.platformTarget}
-            onValueChange={(v) => update("platformTarget", v)}
-            placeholder="Select target platform"
-          >
-            <SelectOption value="linux-amd64">Linux (amd64)</SelectOption>
-            <SelectOption value="linux-arm64">Linux (arm64)</SelectOption>
-            <SelectOption value="darwin-amd64">macOS (amd64)</SelectOption>
-            <SelectOption value="darwin-arm64">macOS (arm64)</SelectOption>
-            <SelectOption value="windows-amd64">Windows (amd64)</SelectOption>
-            <SelectOption value="windows-arm64">Windows (arm64)</SelectOption>
-          </Select>
-        </div>
-      </div>
 
-      <Separator />
-
-      {/* Post Install Script */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="npm-postinstall-toggle">Post Install Script</Label>
-          <button
-            type="button"
-            id="npm-postinstall-toggle"
-            role="switch"
-            aria-checked={data.postInstallEnabled}
-            onClick={() => update("postInstallEnabled", !data.postInstallEnabled)}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border border-white/10 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-500 ${
-              data.postInstallEnabled ? "bg-white" : "bg-white/10"
-            }`}
-          >
-            <span
-              className={`pointer-events-none block h-5 w-5 rounded-full shadow-lg transition-transform ${
-                data.postInstallEnabled
-                  ? "translate-x-5 bg-black"
-                  : "translate-x-0 bg-zinc-400"
-              }`}
-            />
-          </button>
-        </div>
-        {data.postInstallEnabled && (
-          <div className="space-y-2.5 animate-in">
-            <Label htmlFor="npm-postinstall-script">Script Content</Label>
-            <Textarea
-              id="npm-postinstall-script"
-              placeholder="#!/bin/sh&#10;chmod +x ./bin/mytool"
-              value={data.postInstallScript}
-              onChange={(e) => update("postInstallScript", e.target.value)}
-              className="min-h-[80px] font-mono text-xs"
-            />
+        {/* Dynamic Asset URLs */}
+        {data.platforms.length > 0 && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 ease-out py-2">
+            <Label className="text-zinc-400">Platform Asset URLs</Label>
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+              {PLATFORMS.filter((p) => data.platforms.includes(p.id)).map(
+                (platform) => (
+                  <div key={`asset-${platform.id}`} className="space-y-2.5">
+                    <Label
+                      htmlFor={`npm-asset-${platform.id}`}
+                      className="text-xs text-zinc-400"
+                    >
+                      {platform.label} URL
+                    </Label>
+                    <Input
+                      id={`npm-asset-${platform.id}`}
+                      placeholder={`https://.../${platform.id}-binary`}
+                      value={data.assetUrls[platform.id] || ""}
+                      onChange={(e) => updateAssetUrl(platform.id, e.target.value)}
+                    />
+                  </div>
+                )
+              )}
+            </div>
           </div>
         )}
-      </div>
-
-      <Separator />
-
-      {/* Description */}
-      <div className="space-y-2.5">
-        <Label htmlFor="npm-description">Description</Label>
-        <Input
-          id="npm-description"
-          placeholder="A short description for the npm package"
-          value={data.description}
-          onChange={(e) => update("description", e.target.value)}
-        />
-      </div>
-
-      {/* Notes */}
-      <div className="space-y-2.5">
-        <Label htmlFor="npm-notes">Extra Notes</Label>
-        <Textarea
-          id="npm-notes"
-          placeholder="Any additional configuration or notes..."
-          value={data.notes}
-          onChange={(e) => update("notes", e.target.value)}
-        />
       </div>
     </div>
   );
 }
-
-export const INITIAL_NPM_WRAPPER_DATA: NpmWrapperFormData = {
-  packageName: "",
-  cliCommandName: "",
-  binarySourceUrl: "",
-  version: "",
-  installDirectory: "",
-  platformTarget: "",
-  postInstallScript: "",
-  postInstallEnabled: false,
-  description: "",
-  notes: "",
-};

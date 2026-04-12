@@ -61,7 +61,7 @@ export default function GeneratePage() {
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_30%_20%,_rgba(255,255,255,0.04)_0%,_transparent_50%,_rgba(0,0,0,0.9)_100%)]" />
 
       {/* Page Content */}
-      <div className="z-10 flex w-full max-w-4xl flex-col px-6 py-10 sm:px-8 md:px-12 md:py-16">
+      <div className="z-10 flex w-full max-w-6xl flex-col px-6 py-10 sm:px-8 md:px-12 md:py-16">
         {/* Back Link */}
         <Link
           href="/"

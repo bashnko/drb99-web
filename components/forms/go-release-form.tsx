@@ -9,23 +9,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 
 const PLATFORMS = [
-  { id: "linux-amd64", label: "Linux (amd64)" },
-  { id: "linux-arm64", label: "Linux (arm64)" },
-  { id: "darwin-amd64", label: "macOS (amd64)" },
-  { id: "darwin-arm64", label: "macOS (arm64)" },
-  { id: "windows-amd64", label: "Windows (amd64)" },
-  { id: "windows-arm64", label: "Windows (arm64)" },
+  { id: "linux", label: "Linux" },
+  { id: "darwin", label: "macOS" },
+  { id: "windows", label: "Windows" },
 ];
 
 export interface GoReleaseFormData {
   repoUrl: string;
   binaryName: string;
-  version: string;
   packageName: string;
   description: string;
   author: string;
   platforms: string[];
-  outputMode: string;
   notes: string;
 }
 
@@ -51,7 +46,7 @@ export function GoReleaseForm({ data, onChange }: GoReleaseFormProps) {
 
   return (
     <div className="space-y-8">
-      {/* Row 1 */}
+      {/* Main Settings */}
       <div className="grid gap-6 sm:grid-cols-2">
         <div className="space-y-2.5">
           <Label htmlFor="go-repo-url">Repository URL</Label>
@@ -68,36 +63,18 @@ export function GoReleaseForm({ data, onChange }: GoReleaseFormProps) {
             id="go-binary-name"
             placeholder="mytool"
             value={data.binaryName}
-            onChange={(e) => update("binaryName", e.target.value)}
-          />
-        </div>
-      </div>
-
-      {/* Row 2 */}
-      <div className="grid gap-6 sm:grid-cols-2">
-        <div className="space-y-2.5">
-          <Label htmlFor="go-version">Version</Label>
-          <Input
-            id="go-version"
-            placeholder="1.0.0"
-            value={data.version}
-            onChange={(e) => update("version", e.target.value)}
-          />
-        </div>
-        <div className="space-y-2.5">
-          <Label htmlFor="go-package-name">Package Name</Label>
-          <Input
-            id="go-package-name"
-            placeholder="@scope/package-name"
-            value={data.packageName}
-            onChange={(e) => update("packageName", e.target.value)}
+            onChange={(e) => {
+              update("binaryName", e.target.value);
+              update("packageName", e.target.value); // Sync automatically
+            }}
           />
         </div>
       </div>
 
       <Separator />
 
-      {/* Description & Author */}
+      {/* Description & Author (Commented out for now) */}
+      {/* 
       <div className="grid gap-6 sm:grid-cols-2">
         <div className="space-y-2.5">
           <Label htmlFor="go-description">Description</Label>
@@ -118,6 +95,7 @@ export function GoReleaseForm({ data, onChange }: GoReleaseFormProps) {
           />
         </div>
       </div>
+      */}
 
       {/* Platforms */}
       <div className="space-y-3">
@@ -153,32 +131,9 @@ export function GoReleaseForm({ data, onChange }: GoReleaseFormProps) {
         </div>
       </div>
 
-      <Separator />
+      {/* Output mode section removed as requested */}
 
-      {/* Output Mode */}
-      <div className="space-y-2.5 sm:max-w-xs">
-        <Label htmlFor="go-output-mode">Output Mode</Label>
-        <Select
-          value={data.outputMode}
-          onValueChange={(v) => update("outputMode", v)}
-          placeholder="Select output mode"
-        >
-          <SelectOption value="zip">ZIP Archive</SelectOption>
-          <SelectOption value="tar">Tar Archive</SelectOption>
-          <SelectOption value="directory">Directory</SelectOption>
-        </Select>
-      </div>
-
-      {/* Notes */}
-      <div className="space-y-2.5">
-        <Label htmlFor="go-notes">Notes / Extra Configuration</Label>
-        <Textarea
-          id="go-notes"
-          placeholder="Any extra flags, build tags, or configuration..."
-          value={data.notes}
-          onChange={(e) => update("notes", e.target.value)}
-        />
-      </div>
+      {/* Notes section removed as requested */}
     </div>
   );
 }
@@ -186,11 +141,9 @@ export function GoReleaseForm({ data, onChange }: GoReleaseFormProps) {
 export const INITIAL_GO_RELEASE_DATA: GoReleaseFormData = {
   repoUrl: "",
   binaryName: "",
-  version: "",
   packageName: "",
   description: "",
   author: "",
   platforms: [],
-  outputMode: "",
   notes: "",
 };
