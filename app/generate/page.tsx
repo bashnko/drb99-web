@@ -2,9 +2,15 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { ArrowLeft, PackagePlus, RefreshCcw } from "lucide-react";
 import {
   GoReleaseForm,
   INITIAL_GO_RELEASE_DATA,
@@ -16,6 +22,9 @@ import {
   type NpmWrapperFormData,
 } from "@/components/forms/npm-wrapper-form";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import { generatePackage } from "@/lib/api";
+import { mapPlatform, mapPlatformsList } from "@/lib/platforms";
 
 type ActiveForm = "go-release" | "npm-wrapper";
 
@@ -33,6 +42,7 @@ const FORM_OPTIONS: { id: ActiveForm; label: string; description: string }[] = [
 ];
 
 export default function GeneratePage() {
+  const router = useRouter();
   const [activeForm, setActiveForm] = React.useState<ActiveForm>("go-release");
   const [goData, setGoData] = React.useState<GoReleaseFormData>(
     INITIAL_GO_RELEASE_DATA
@@ -41,89 +51,129 @@ export default function GeneratePage() {
     INITIAL_NPM_WRAPPER_DATA
   );
 
+  const [isGenerating, setIsGenerating] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
   const handleReset = () => {
     if (activeForm === "go-release") {
       setGoData(INITIAL_GO_RELEASE_DATA);
     } else {
       setNpmData(INITIAL_NPM_WRAPPER_DATA);
     }
+    setError(null);
   };
 
-  const handleGenerate = () => {
-    // Placeholder for API integration
-    const payload = activeForm === "go-release" ? goData : npmData;
-    console.log("Generating zip with:", { type: activeForm, ...payload });
+  const handleGenerate = async () => {
+    setError(null);
+    setIsGenerating(true);
+
+    try {
+      let payload;
+      if (activeForm === "go-release") {
+        payload = {
+          repo_url: goData.repoUrl,
+          binary_name: goData.binaryName,
+          platforms: mapPlatformsList(goData.platforms),
+          features: {
+            npm_wrapper: false,
+            goreleaser: true,
+            github_actions: true,
+          },
+        };
+      } else {
+        // filter out asset urls that are not in the selected platforms
+        const filteredUrls: Record<string, string> = {};
+        npmData.platforms.forEach((p) => {
+          filteredUrls[mapPlatform(p)] = npmData.assetUrls[p] || "";
+        });
+
+        payload = {
+          repo_url: npmData.repoUrl,
+          binary_name: npmData.cliCommandName,
+          version: npmData.version,
+          platforms: mapPlatformsList(npmData.platforms),
+          mode: "manual",
+          features: {
+            npm_wrapper: true,
+            goreleaser: false,
+            github_actions: false,
+          },
+          asset_urls: filteredUrls,
+        };
+      }
+
+      const result = await generatePackage(payload);
+
+      const sessionData = {
+        workflow: activeForm,
+        summary: payload,
+        files: result.files,
+      };
+
+      sessionStorage.setItem("generated-result", JSON.stringify(sessionData));
+      router.push("/result");
+    } catch (err: any) {
+      setError(err.message || "Failed to generate package");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center overflow-hidden bg-[#050505] font-sans selection:bg-zinc-800">
-      {/* Background Lighting — matches hero */}
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_30%_20%,_rgba(255,255,255,0.04)_0%,_transparent_50%,_rgba(0,0,0,0.9)_100%)]" />
-
-      {/* Page Content */}
-     <div className="z-10 flex w-full max-w-6xl flex-col px-6 py-10 sm:px-8 md:px-12 md:py-16">
-        {/* Back Link */}
-        <Link
-          href="/"
-          className="group mb-12 inline-flex w-fit items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-white"
-        >
-          <svg
-            className="h-4 w-4 transition-transform group-hover:-translate-x-0.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19 12H5M12 19l-7-7 7-7"
-            />
-          </svg>
+    <div className="relative min-h-screen bg-[#09090b] text-zinc-50 font-sans selection:bg-zinc-800 flex flex-col items-center py-12 px-6">
+      
+      {/* Back Link (Absolute Top Left) */}
+      <div className="absolute top-6 left-6 md:top-8 md:left-8 z-20">
+        <Link href="/" className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-white transition-colors">
+          <ArrowLeft className="w-4 h-4" />
           Back to home
         </Link>
+      </div>
 
+      <div className="w-full max-w-3xl space-y-8 z-10 relative mt-4 md:mt-8">
         {/* Page Header */}
-        <header className="mb-10">
-          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+        <div className="text-center space-y-3 pb-4">
+          <h1 className="text-3xl font-medium tracking-tight text-white">
             Generate your package
           </h1>
-          <p className="mt-3 max-w-xl text-base leading-relaxed text-zinc-400 sm:text-lg">
-            Choose your workflow and fill in the required details to generate the
-            wrapper zip.
+          <p className="text-zinc-400 text-sm max-w-xl mx-auto">
+            Choose your workflow and fill in the required details to generate the wrapper zip.
           </p>
-        </header>
+        </div>
 
         {/* Form Selector */}
-        <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {FORM_OPTIONS.map((option) => {
             const isActive = activeForm === option.id;
             return (
               <button
                 key={option.id}
                 type="button"
-                onClick={() => setActiveForm(option.id)}
+                disabled={isGenerating}
+                onClick={() => {
+                  setActiveForm(option.id);
+                  setError(null);
+                }}
                 className={cn(
-                  "group relative flex flex-col items-start rounded-xl border px-5 py-4 text-left transition-all cursor-pointer sm:px-6 sm:py-5",
+                  "group relative flex flex-col items-start rounded-xl border px-6 py-5 text-left transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed",
                   isActive
-                    ? "border-white/20 bg-white/[0.06] shadow-[0_0_30px_-10px_rgba(255,255,255,0.15)]"
+                    ? "border-white/20 bg-white/[0.06] shadow-sm"
                     : "border-white/[0.08] bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.04]"
                 )}
               >
-                {/* Active Indicator Dot */}
                 <div className="mb-3 flex items-center gap-2.5">
                   <div
                     className={cn(
-                      "h-2.5 w-2.5 rounded-full border transition-all",
+                      "h-2 w-2 rounded-full transition-all",
                       isActive
-                        ? "border-white bg-white shadow-[0_0_8px_rgba(255,255,255,0.6)]"
-                        : "border-zinc-600 bg-transparent"
+                        ? "bg-emerald-500"
+                        : "bg-zinc-600 group-hover:bg-zinc-500"
                     )}
                   />
                   <span
                     className={cn(
-                      "text-sm font-semibold tracking-tight transition-colors",
-                      isActive ? "text-white" : "text-zinc-400"
+                      "text-sm font-medium tracking-tight transition-colors",
+                      isActive ? "text-white" : "text-zinc-400 group-hover:text-zinc-300"
                     )}
                   >
                     {option.label}
@@ -131,8 +181,8 @@ export default function GeneratePage() {
                 </div>
                 <p
                   className={cn(
-                    "text-[13px] leading-relaxed transition-colors",
-                    isActive ? "text-zinc-400" : "text-zinc-600"
+                    "text-xs leading-relaxed transition-colors",
+                    isActive ? "text-zinc-400" : "text-zinc-500 group-hover:text-zinc-400"
                   )}
                 >
                   {option.description}
@@ -142,58 +192,21 @@ export default function GeneratePage() {
           })}
         </div>
 
-        {/* Form Card */}
-        <Card className="mb-8">
-          <CardContent className="p-6 sm:p-8">
-            {/* Form Header inside card */}
-            <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5">
-                {activeForm === "go-release" ? (
-                  <svg
-                    className="h-4 w-4 text-zinc-300"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={1.5}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    className="h-4 w-4 text-zinc-300"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={1.5}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
-                    />
-                  </svg>
-                )}
-              </div>
-              <div>
-                <h2 className="text-sm font-semibold text-white">
-                  {activeForm === "go-release"
-                    ? "Go Release Configuration"
-                    : "NPM Wrapper Configuration"}
-                </h2>
-                <p className="text-xs text-zinc-500">
-                  {activeForm === "go-release"
-                    ? "Configure your Go binary packaging"
-                    : "Set up the npm wrapper package"}
-                </p>
-              </div>
-            </div>
-
-            <Separator className="mb-8" />
-
+        {/* Form Card Configuration */}
+        <Card className={cn(isGenerating && "opacity-60 pointer-events-none")}>
+          <CardHeader>
+            <CardTitle>
+              {activeForm === "go-release"
+                ? "Go Release Configuration"
+                : "NPM Wrapper Configuration"}
+            </CardTitle>
+            <CardDescription>
+              {activeForm === "go-release"
+                ? "Configure your Go binary packaging details."
+                : "Specify registry setup for the npm wrapper package."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
             {/* Active Form */}
             {activeForm === "go-release" ? (
               <GoReleaseForm data={goData} onChange={setGoData} />
@@ -203,26 +216,28 @@ export default function GeneratePage() {
           </CardContent>
         </Card>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
-          <Button variant="secondary" size="default" onClick={handleReset}>
+        {/* Error Message */}
+        {error && (
+          <div className="rounded-md bg-red-500/10 px-4 py-3 border border-red-500/20 text-sm text-red-400">
+            {error}
+          </div>
+        )}
+
+        {/* Action Buttons at the Bottom */}
+        <div className="flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end pt-4">
+          <Button variant="secondary" size="sm" className="w-full sm:w-auto gap-2" onClick={handleReset} disabled={isGenerating}>
+            <RefreshCcw className="w-3.5 h-3.5 text-zinc-400" />
             Reset
           </Button>
-          <Button variant="primary" size="default" onClick={handleGenerate}>
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
-              />
-            </svg>
-            Generate Zip
+          <Button variant="primary" size="sm" className="w-full sm:w-auto gap-2" onClick={handleGenerate} disabled={isGenerating}>
+            {isGenerating ? (
+              <>Generating...</>
+            ) : (
+              <>
+                <PackagePlus className="w-4 h-4" />
+                Generate ZIP
+              </>
+            )}
           </Button>
         </div>
       </div>
