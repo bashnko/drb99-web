@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, PackagePlus, RefreshCcw } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -10,7 +12,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, PackagePlus, RefreshCcw } from "lucide-react";
 import {
   GoReleaseForm,
   INITIAL_GO_RELEASE_DATA,
@@ -22,11 +23,16 @@ import {
   type NpmWrapperFormData,
 } from "@/components/forms/npm-wrapper-form";
 import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
 import { generatePackage } from "@/lib/api";
 import { mapPlatform, mapPlatformsList } from "@/lib/platforms";
+import type { SessionData } from "@/lib/generated-result";
+import {
+  validateGoReleaseForm,
+  validateNpmWrapperForm,
+} from "@/lib/validation";
 
 type ActiveForm = "go-release" | "npm-wrapper";
+type GeneratedFiles = Record<string, string>;
 
 const FORM_OPTIONS: { id: ActiveForm; label: string; description: string }[] = [
   {
@@ -40,6 +46,64 @@ const FORM_OPTIONS: { id: ActiveForm; label: string; description: string }[] = [
     description: "Create an npm wrapper around an existing binary",
   },
 ];
+
+function buildGoReleasePayload(data: GoReleaseFormData) {
+  return {
+    repo_url: data.repoUrl,
+    binary_name: data.binaryName,
+    platforms: mapPlatformsList(data.platforms),
+    features: {
+      npm_wrapper: false,
+      goreleaser: true,
+      github_actions: true,
+    },
+  };
+}
+
+function buildNpmWrapperPayload(data: NpmWrapperFormData) {
+  const asset_urls = Object.fromEntries(
+    data.platforms.map((platform) => [
+      mapPlatform(platform),
+      data.assetUrls[platform] ?? "",
+    ])
+  );
+
+  return {
+    repo_url: data.repoUrl,
+    binary_name: data.cliCommandName,
+    version: data.version,
+    platforms: mapPlatformsList(data.platforms),
+    mode: "manual" as const,
+    features: {
+      npm_wrapper: true,
+      goreleaser: false,
+      github_actions: false,
+    },
+    asset_urls,
+  };
+}
+
+function createSessionData(
+  workflow: ActiveForm,
+  summary: SessionData["summary"],
+  files: GeneratedFiles
+): SessionData {
+  return {
+    workflow,
+    summary,
+    files,
+  };
+}
+
+function validateActiveForm(
+  activeForm: ActiveForm,
+  goData: GoReleaseFormData,
+  npmData: NpmWrapperFormData
+) {
+  return activeForm === "go-release"
+    ? validateGoReleaseForm(goData)
+    : validateNpmWrapperForm(npmData);
+}
 
 export default function GeneratePage() {
   const router = useRouter();
@@ -64,84 +128,59 @@ export default function GeneratePage() {
   };
 
   const handleGenerate = async () => {
+    const validationError = validateActiveForm(activeForm, goData, npmData);
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     setError(null);
     setIsGenerating(true);
 
     try {
-      let payload;
-      if (activeForm === "go-release") {
-        payload = {
-          repo_url: goData.repoUrl,
-          binary_name: goData.binaryName,
-          platforms: mapPlatformsList(goData.platforms),
-          features: {
-            npm_wrapper: false,
-            goreleaser: true,
-            github_actions: true,
-          },
-        };
-      } else {
-        // filter out asset urls that are not in the selected platforms
-        const filteredUrls: Record<string, string> = {};
-        npmData.platforms.forEach((p) => {
-          filteredUrls[mapPlatform(p)] = npmData.assetUrls[p] || "";
-        });
-
-        payload = {
-          repo_url: npmData.repoUrl,
-          binary_name: npmData.cliCommandName,
-          version: npmData.version,
-          platforms: mapPlatformsList(npmData.platforms),
-          mode: "manual",
-          features: {
-            npm_wrapper: true,
-            goreleaser: false,
-            github_actions: false,
-          },
-          asset_urls: filteredUrls,
-        };
-      }
+      const payload =
+        activeForm === "go-release"
+          ? buildGoReleasePayload(goData)
+          : buildNpmWrapperPayload(npmData);
 
       const result = await generatePackage(payload);
-
-      const sessionData = {
-        workflow: activeForm,
-        summary: payload,
-        files: result.files,
-      };
+      const sessionData = createSessionData(activeForm, payload, result.files);
 
       sessionStorage.setItem("generated-result", JSON.stringify(sessionData));
       router.push("/result");
-    } catch (err: any) {
-      setError(err.message || "Failed to generate package");
+    } catch (error: unknown) {
+      setError(
+        error instanceof Error ? error.message : "Failed to generate package"
+      );
     } finally {
       setIsGenerating(false);
     }
   };
 
   return (
-    <div className="relative min-h-screen bg-[#09090b] text-zinc-50 font-sans selection:bg-zinc-800 flex flex-col items-center py-12 px-6">
-      
-      {/* Back Link (Absolute Top Left) */}
+    <div className="relative flex min-h-screen flex-col items-center bg-[#09090b] px-6 py-12 font-sans text-zinc-50 selection:bg-zinc-800">
       <div className="absolute top-6 left-6 md:top-8 md:left-8 z-20">
-        <Link href="/" className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-white transition-colors">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-white"
+        >
           <ArrowLeft className="w-4 h-4" />
           Back to home
         </Link>
       </div>
 
-      <div className="w-full max-w-3xl space-y-8 z-10 relative mt-4 md:mt-8">
-        {/* Page Header */}
+      <div className="relative z-10 mt-4 w-full max-w-3xl space-y-8 md:mt-8">
         <div className="text-center space-y-3 pb-4">
           <h1 className="text-3xl font-medium tracking-tight text-white">
             Generate your package
           </h1>
-          <p className="text-zinc-400 text-sm max-w-xl mx-auto">
-            Choose your workflow and fill in the required details to generate the wrapper zip.
+          <p className="mx-auto max-w-xl text-sm text-zinc-400">
+            Choose your workflow and fill in the required details to generate
+            the wrapper zip.
           </p>
         </div>
 
-        {/* Form Selector */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {FORM_OPTIONS.map((option) => {
             const isActive = activeForm === option.id;
@@ -155,7 +194,7 @@ export default function GeneratePage() {
                   setError(null);
                 }}
                 className={cn(
-                  "group relative flex flex-col items-start rounded-xl border px-6 py-5 text-left transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed",
+                  "group relative flex cursor-pointer flex-col items-start rounded-xl border px-6 py-5 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60",
                   isActive
                     ? "border-white/20 bg-white/[0.06] shadow-sm"
                     : "border-white/[0.08] bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.04]"
@@ -173,7 +212,9 @@ export default function GeneratePage() {
                   <span
                     className={cn(
                       "text-sm font-medium tracking-tight transition-colors",
-                      isActive ? "text-white" : "text-zinc-400 group-hover:text-zinc-300"
+                      isActive
+                        ? "text-white"
+                        : "text-zinc-400 group-hover:text-zinc-300"
                     )}
                   >
                     {option.label}
@@ -182,7 +223,9 @@ export default function GeneratePage() {
                 <p
                   className={cn(
                     "text-xs leading-relaxed transition-colors",
-                    isActive ? "text-zinc-400" : "text-zinc-500 group-hover:text-zinc-400"
+                    isActive
+                      ? "text-zinc-400"
+                      : "text-zinc-500 group-hover:text-zinc-400"
                   )}
                 >
                   {option.description}
@@ -192,7 +235,6 @@ export default function GeneratePage() {
           })}
         </div>
 
-        {/* Form Card Configuration */}
         <Card className={cn(isGenerating && "opacity-60 pointer-events-none")}>
           <CardHeader>
             <CardTitle>
@@ -216,20 +258,30 @@ export default function GeneratePage() {
           </CardContent>
         </Card>
 
-        {/* Error Message */}
         {error && (
           <div className="rounded-md bg-red-500/10 px-4 py-3 border border-red-500/20 text-sm text-red-400">
             {error}
           </div>
         )}
 
-        {/* Action Buttons at the Bottom */}
         <div className="flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end pt-4">
-          <Button variant="secondary" size="sm" className="w-full sm:w-auto gap-2" onClick={handleReset} disabled={isGenerating}>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="w-full gap-2 sm:w-auto"
+            onClick={handleReset}
+            disabled={isGenerating}
+          >
             <RefreshCcw className="w-3.5 h-3.5 text-zinc-400" />
             Reset
           </Button>
-          <Button variant="primary" size="sm" className="w-full sm:w-auto gap-2" onClick={handleGenerate} disabled={isGenerating}>
+          <Button
+            variant="primary"
+            size="sm"
+            className="w-full gap-2 sm:w-auto"
+            onClick={handleGenerate}
+            disabled={isGenerating}
+          >
             {isGenerating ? (
               <>Generating...</>
             ) : (

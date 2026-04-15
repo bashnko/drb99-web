@@ -21,4 +21,4 @@ export const mockResult = {
     "index.js": "console.log('run');",
     "install.js": "console.log('install');"
   }
-};
+} as const;

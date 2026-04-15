@@ -11,7 +11,13 @@ interface CheckboxProps {
   disabled?: boolean;
 }
 
-function Checkbox({ id, checked = false, onCheckedChange, className, disabled }: CheckboxProps) {
+export function Checkbox({
+  id,
+  checked = false,
+  onCheckedChange,
+  className,
+  disabled,
+}: CheckboxProps) {
   return (
     <button
       role="checkbox"
@@ -24,9 +30,9 @@ function Checkbox({ id, checked = false, onCheckedChange, className, disabled }:
         onCheckedChange?.(!checked);
       }}
       className={cn(
-        "peer h-[18px] w-[18px] shrink-0 rounded-[4px] border border-white/20 transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-500 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer",
+        "peer h-[18px] w-[18px] shrink-0 cursor-pointer rounded-[4px] border border-white/20 transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-500 disabled:cursor-not-allowed disabled:opacity-50",
         checked
-          ? "bg-white border-white text-black"
+          ? "border-white bg-white text-black"
           : "bg-transparent hover:border-white/40",
         className
       )}
@@ -45,5 +51,3 @@ function Checkbox({ id, checked = false, onCheckedChange, className, disabled }:
     </button>
   );
 }
-
-export { Checkbox };

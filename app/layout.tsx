@@ -13,7 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "drb99 — Go CLI to npm",
+  title: {
+    default: "drb99",
+    template: "%s | drb99",
+  },
   description: "Turn your Go binaries into installable npm packages with the release wiring already handled.",
 };
 
@@ -27,7 +30,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );
 }

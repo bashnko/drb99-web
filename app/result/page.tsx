@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Download, Copy, FileCode2, Check, DownloadCloud, Code2 } from "lucide-react";
+import { ArrowLeft, Copy, FileCode2, Check, DownloadCloud, Code2, Pencil, Lock } from "lucide-react";
 import Link from "next/link";
 
 interface SessionData {
@@ -51,6 +51,7 @@ export default function ResultPage() {
   const [activeFile, setActiveFile] = useState<string>("");
   const [fileContents, setFileContents] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     const raw = sessionStorage.getItem("generated-result");
@@ -106,21 +107,8 @@ export default function ResultPage() {
 
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-50 font-sans selection:bg-zinc-800">
-      {/* Top Navbar Actions */}
-      <div className="flex items-center justify-between border-b border-white/[0.08] px-6 py-4 bg-[#09090b]">
-        <Link href="/generate" className="inline-flex">
-          <Button variant="ghost" size="sm" className="gap-2 text-zinc-400 hover:text-white">
-            <ArrowLeft className="w-4 h-4" />
-            Back to edit
-          </Button>
-        </Link>
-        <Button variant="primary" size="sm" className="gap-2">
-          <DownloadCloud className="w-4 h-4" />
-          Download ZIP
-        </Button>
-      </div>
 
-      <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
+      <div className="w-full px-6 lg:px-10 py-6 lg:py-8 space-y-8">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
@@ -131,6 +119,20 @@ export default function ResultPage() {
             <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             Workflow: {isNpmWrapper ? "NPM Wrapper" : "Go Release"}
           </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center justify-between">
+          <Link href="/generate" className="inline-flex">
+            <Button variant="ghost" size="sm" className="gap-2 text-zinc-400 hover:text-white">
+              <ArrowLeft className="w-4 h-4" />
+              Back to edit
+            </Button>
+          </Link>
+          <Button variant="primary" size="sm" className="gap-2">
+            <DownloadCloud className="w-4 h-4" />
+            Download ZIP
+          </Button>
         </div>
 
         {/* Main 2-Column Grid */}
@@ -202,7 +204,7 @@ export default function ResultPage() {
           </Card>
 
           {/* Right Panel - Workspace */}
-          <div className="flex flex-col lg:flex-row h-[70vh] min-h-[600px] rounded-xl border border-white/[0.08] bg-[#0c0c0e] overflow-hidden shadow-2xl">
+          <div className="flex flex-col lg:flex-row h-[75vh] min-h-[500px] rounded-xl border border-white/[0.08] bg-[#0c0c0e] overflow-hidden shadow-2xl">
 
             {/* File Explorer Sidebar */}
             <div className="w-full lg:w-64 border-r border-white/[0.08] flex flex-col bg-[#09090b]">
@@ -252,9 +254,19 @@ export default function ResultPage() {
                     {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                     {copied ? "Copied" : "Copy"}
                   </Button>
-                  <Button variant="ghost" size="sm" className="h-8 gap-2 text-zinc-400 hover:text-white" disabled>
-                    <Download className="w-3.5 h-3.5" />
-                    <span className="sr-only sm:not-sr-only">Download File</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`h-8 gap-2 transition-colors ${
+                      isEditing
+                        ? "text-emerald-400 hover:text-emerald-300"
+                        : "text-zinc-400 hover:text-white"
+                    }`}
+                    onClick={() => setIsEditing((prev) => !prev)}
+                    disabled={!activeFile}
+                  >
+                    {isEditing ? <Pencil className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                    {isEditing ? "Editing" : "Edit"}
                   </Button>
                 </div>
               </div>
@@ -266,7 +278,7 @@ export default function ResultPage() {
                     language={getLanguage(activeFile)}
                     theme="vs-dark"
                     value={fileContents[activeFile] || ""}
-                    onChange={handleEditorChange}
+                    onChange={isEditing ? handleEditorChange : undefined}
                     options={{
                       minimap: { enabled: false },
                       fontSize: 14,
@@ -275,6 +287,7 @@ export default function ResultPage() {
                       scrollBeyondLastLine: false,
                       smoothScrolling: true,
                       cursorBlinking: "smooth",
+                      readOnly: !isEditing,
                       fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",
                     }}
                     className="absolute inset-0"

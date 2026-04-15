@@ -1,13 +1,15 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+type SeparatorProps = React.HTMLAttributes<HTMLDivElement> & {
+  orientation?: "horizontal" | "vertical";
+};
+
 function Separator({
   className,
   orientation = "horizontal",
   ...props
-}: React.HTMLAttributes<HTMLDivElement> & {
-  orientation?: "horizontal" | "vertical";
-}) {
+}: SeparatorProps) {
   return (
     <div
       role="separator"
