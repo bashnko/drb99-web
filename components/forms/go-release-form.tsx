@@ -2,9 +2,9 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { PLATFORM_OPTIONS, type PlatformId } from "@/lib/platforms";
+import { cn } from "@/lib/utils";
 
 export interface GoReleaseFormData {
   repoUrl: string;
@@ -49,30 +49,32 @@ export function GoReleaseForm({ data, onChange }: GoReleaseFormProps) {
     <div className="space-y-8">
       <div className="grid gap-6 sm:grid-cols-2">
         <div className="space-y-2.5">
-          <Label htmlFor="go-repo-url">Repository URL</Label>
+          <Label htmlFor="go-repo-url" className="text-zinc-400 text-sm">Repository URL</Label>
           <Input
             id="go-repo-url"
             placeholder="github.com/user/repo"
             value={data.repoUrl}
             onChange={(event) => update("repoUrl", event.target.value)}
+            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-lg transition-all"
           />
         </div>
         <div className="space-y-2.5">
-          <Label htmlFor="go-binary-name">Binary Name</Label>
+          <Label htmlFor="go-binary-name" className="text-zinc-400 text-sm">Binary Name</Label>
           <Input
             id="go-binary-name"
             placeholder="mytool"
             value={data.binaryName}
             onChange={(event) => updateBinaryName(event.target.value)}
+            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-lg transition-all"
           />
         </div>
       </div>
 
-      <Separator />
+      <Separator className="bg-zinc-800/50" />
 
       <div className="space-y-3">
-        <Label>Target Platforms</Label>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Label className="text-zinc-400 text-sm">Target Platforms</Label>
+        <div className="grid grid-cols-3 gap-4">
           {PLATFORM_OPTIONS.map((platform) => {
             const isChecked = data.platforms.includes(platform.id);
 
@@ -88,16 +90,17 @@ export function GoReleaseForm({ data, onChange }: GoReleaseFormProps) {
                     togglePlatform(platform.id, !isChecked);
                   }
                 }}
-                className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3.5 py-3 transition-colors hover:border-white/20 hover:bg-white/[0.04]"
+                className={cn(
+                  "group flex cursor-pointer flex-col items-center justify-center rounded-xl border p-4 transition-all outline-none focus-visible:ring-2 focus-visible:ring-zinc-400",
+                  isChecked
+                    ? "border-zinc-400 bg-zinc-800/50"
+                    : "border-zinc-800 bg-transparent hover:border-zinc-700 hover:bg-zinc-900/30"
+                )}
               >
-                <Checkbox
-                  id={`go-platform-${platform.id}`}
-                  checked={isChecked}
-                  onCheckedChange={(checked) =>
-                    togglePlatform(platform.id, checked)
-                  }
-                />
-                <span className="text-sm text-zinc-300">{platform.label}</span>
+                {platform.id === "linux" && <img src="https://files.svgcdn.io/flat-color-icons/linux.svg" alt="Linux" className={cn("w-7 h-7 mb-3 transition-all", isChecked ? "opacity-100 drop-shadow-sm" : "opacity-50 grayscale group-hover:opacity-80 group-hover:grayscale-0")} />}
+                {platform.id === "darwin" && <img src="https://files.svgcdn.io/qlementine-icons/mac-16.svg" alt="macOS" className={cn("w-7 h-7 mb-3 transition-all", isChecked ? "opacity-100 drop-shadow-sm invert" : "opacity-50 grayscale invert group-hover:opacity-80")} />}
+                {platform.id === "windows" && <img src="https://files.svgcdn.io/devicon/windows8.svg" alt="Windows" className={cn("w-7 h-7 mb-3 transition-all", isChecked ? "opacity-100 drop-shadow-sm" : "opacity-50 grayscale group-hover:opacity-80 group-hover:grayscale-0")} />}
+                <span className={cn("text-xs font-medium transition-colors", isChecked ? "text-white" : "text-zinc-500 group-hover:text-zinc-300")}>{platform.label}</span>
               </div>
             );
           })}

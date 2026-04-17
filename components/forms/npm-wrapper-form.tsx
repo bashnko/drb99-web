@@ -2,9 +2,9 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { PLATFORM_OPTIONS, type PlatformId } from "@/lib/platforms";
+import { cn } from "@/lib/utils";
 
 export interface NpmWrapperFormData {
   repoUrl: string;
@@ -77,40 +77,43 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
     <div className="space-y-8">
       <div className="grid gap-6 sm:grid-cols-3">
         <div className="space-y-2.5">
-          <Label htmlFor="npm-repo-url">Repository URL</Label>
+          <Label htmlFor="npm-repo-url" className="text-zinc-400 text-sm">Repository URL</Label>
           <Input
             id="npm-repo-url"
             placeholder="github.com/user/repo"
             value={data.repoUrl}
             onChange={(event) => update("repoUrl", event.target.value)}
+            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-lg transition-all"
           />
         </div>
         <div className="space-y-2.5">
-          <Label htmlFor="npm-cli-command">Binary Name</Label>
+          <Label htmlFor="npm-cli-command" className="text-zinc-400 text-sm">Binary Name</Label>
           <Input
             id="npm-cli-command"
             placeholder="mytool"
             value={data.cliCommandName}
             onChange={(event) => updateCommandName(event.target.value)}
+            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-lg transition-all"
           />
         </div>
         <div className="space-y-2.5">
-          <Label htmlFor="npm-version">Version</Label>
+          <Label htmlFor="npm-version" className="text-zinc-400 text-sm">Version</Label>
           <Input
             id="npm-version"
             placeholder="1.0.0"
             value={data.version}
             onChange={(event) => update("version", event.target.value)}
+            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-lg transition-all"
           />
         </div>
       </div>
 
-      <Separator />
+      <Separator className="bg-zinc-800/50" />
 
       <div className="space-y-6">
         <div className="space-y-3">
-          <Label>Target Platforms</Label>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Label className="text-zinc-400 text-sm">Target Platforms</Label>
+          <div className="grid grid-cols-3 gap-4">
             {PLATFORM_OPTIONS.map((platform) => {
               const isChecked = data.platforms.includes(platform.id);
 
@@ -126,20 +129,17 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
                       togglePlatform(platform.id, !isChecked);
                     }
                   }}
-                  className={
+                  className={cn(
+                    "group flex cursor-pointer flex-col items-center justify-center rounded-xl border p-4 transition-all outline-none focus-visible:ring-2 focus-visible:ring-zinc-400",
                     isChecked
-                      ? "flex cursor-pointer items-center gap-3 rounded-lg border border-white/20 bg-white/[0.06] px-3.5 py-3 transition-colors"
-                      : "flex cursor-pointer items-center gap-3 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3.5 py-3 transition-colors hover:border-white/20 hover:bg-white/[0.04]"
-                  }
+                      ? "border-zinc-400 bg-zinc-800/50"
+                      : "border-zinc-800 bg-transparent hover:border-zinc-700 hover:bg-zinc-900/30"
+                  )}
                 >
-                  <Checkbox
-                    id={`npm-platform-${platform.id}`}
-                    checked={isChecked}
-                    onCheckedChange={(checked) =>
-                      togglePlatform(platform.id, checked)
-                    }
-                  />
-                  <span className="text-sm text-zinc-300">{platform.label}</span>
+                  {platform.id === "linux" && <img src="https://files.svgcdn.io/flat-color-icons/linux.svg" alt="Linux" className={cn("w-7 h-7 mb-3 transition-all", isChecked ? "opacity-100 drop-shadow-sm" : "opacity-50 grayscale group-hover:opacity-80 group-hover:grayscale-0")} />}
+                  {platform.id === "darwin" && <img src="https://files.svgcdn.io/qlementine-icons/mac-16.svg" alt="macOS" className={cn("w-7 h-7 mb-3 transition-all", isChecked ? "opacity-100 drop-shadow-sm invert" : "opacity-50 grayscale invert group-hover:opacity-80")} />}
+                  {platform.id === "windows" && <img src="https://files.svgcdn.io/devicon/windows8.svg" alt="Windows" className={cn("w-7 h-7 mb-3 transition-all", isChecked ? "opacity-100 drop-shadow-sm" : "opacity-50 grayscale group-hover:opacity-80 group-hover:grayscale-0")} />}
+                  <span className={cn("text-xs font-medium transition-colors", isChecked ? "text-white" : "text-zinc-500 group-hover:text-zinc-300")}>{platform.label}</span>
                 </div>
               );
             })}
@@ -148,13 +148,13 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
 
         {selectedPlatforms.length > 0 && (
           <div className="space-y-4 py-2">
-            <Label className="text-zinc-400">Platform Asset URLs</Label>
+            <Label className="text-zinc-400 text-sm">Platform Asset URLs</Label>
             <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
               {selectedPlatforms.map((platform) => (
                 <div key={platform.id} className="space-y-2.5">
                   <Label
                     htmlFor={`npm-asset-${platform.id}`}
-                    className="text-xs text-zinc-400"
+                    className="text-xs text-zinc-500"
                   >
                     {platform.label} URL
                   </Label>
@@ -165,6 +165,7 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
                     onChange={(event) =>
                       updateAssetUrl(platform.id, event.target.value)
                     }
+                    className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-lg transition-all"
                   />
                 </div>
               ))}

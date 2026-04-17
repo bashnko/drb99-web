@@ -159,138 +159,134 @@ export default function GeneratePage() {
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center bg-[#09090b] px-6 py-12 font-sans text-zinc-50 selection:bg-zinc-800">
-      <div className="relative md:absolute top-0 left-0 md:top-8 md:left-8 z-20 w-full md:w-auto mb-6 md:mb-0">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-white"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to home
-        </Link>
-      </div>
-
-      <div className="relative z-10 w-full max-w-3xl space-y-8">
-        <div className="text-center space-y-3 pb-4">
-          <h1 className="text-3xl font-medium tracking-tight text-white">
-            Generate your package
-          </h1>
-          <p className="mx-auto max-w-xl text-sm text-zinc-400">
-            Choose your workflow and fill in the required details to generate
-            the wrapper zip.
-          </p>
+    <div className="relative flex min-h-screen flex-col bg-black px-6 py-12 font-sans text-zinc-50 selection:bg-zinc-800">
+      <div className="w-full max-w-6xl mx-auto">
+        <div className="relative md:absolute top-0 left-0 md:top-8 md:left-8 z-20 w-full md:w-auto mb-10 md:mb-0">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-white"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to home
+          </Link>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {FORM_OPTIONS.map((option) => {
-            const isActive = activeForm === option.id;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                disabled={isGenerating}
-                onClick={() => {
-                  setActiveForm(option.id);
-                  setError(null);
-                }}
-                className={cn(
-                  "group relative flex cursor-pointer flex-col items-start rounded-xl border px-6 py-5 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60",
-                  isActive
-                    ? "border-white/20 bg-white/[0.06] shadow-sm"
-                    : "border-white/[0.08] bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.04]"
-                )}
-              >
-                <div className="mb-3 flex items-center gap-2.5">
-                  <div
+        <div className="mt-8 md:mt-24 grid md:grid-cols-[350px_1fr] gap-12">
+          {/* Left Column: Workflow Selection */}
+          <div className="md:sticky md:top-12 space-y-6 self-start">
+            <h2 className="text-xl font-medium tracking-tight text-white mb-2">
+              Choose your workflow
+            </h2>
+            <div className="grid grid-cols-1 gap-4">
+              {FORM_OPTIONS.map((option) => {
+                const isActive = activeForm === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    disabled={isGenerating}
+                    onClick={() => {
+                      setActiveForm(option.id);
+                      setError(null);
+                    }}
                     className={cn(
-                      "h-2 w-2 rounded-full transition-all",
+                      "group relative flex cursor-pointer flex-col items-start rounded-xl border p-5 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60",
                       isActive
-                        ? "bg-emerald-500"
-                        : "bg-zinc-600 group-hover:bg-zinc-500"
-                    )}
-                  />
-                  <span
-                    className={cn(
-                      "text-sm font-medium tracking-tight transition-colors",
-                      isActive
-                        ? "text-white"
-                        : "text-zinc-400 group-hover:text-zinc-300"
+                        ? "border-zinc-400 bg-zinc-900/40"
+                        : "border-zinc-800 bg-transparent hover:border-zinc-700"
                     )}
                   >
-                    {option.label}
-                  </span>
-                </div>
-                <p
-                  className={cn(
-                    "text-xs leading-relaxed transition-colors",
-                    isActive
-                      ? "text-zinc-400"
-                      : "text-zinc-500 group-hover:text-zinc-400"
-                  )}
-                >
-                  {option.description}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-
-        <Card className={cn(isGenerating && "opacity-60 pointer-events-none")}>
-          <CardHeader>
-            <CardTitle>
-              {activeForm === "go-release"
-                ? "Go Release Configuration"
-                : "NPM Wrapper Configuration"}
-            </CardTitle>
-            <CardDescription>
-              {activeForm === "go-release"
-                ? "Configure your Go binary packaging details."
-                : "Specify registry setup for the npm wrapper package."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Active Form */}
-            {activeForm === "go-release" ? (
-              <GoReleaseForm data={goData} onChange={setGoData} />
-            ) : (
-              <NpmWrapperForm data={npmData} onChange={setNpmData} />
-            )}
-          </CardContent>
-        </Card>
-
-        {error && (
-          <div className="rounded-md bg-red-500/10 px-4 py-3 border border-red-500/20 text-sm text-red-400">
-            {error}
+                    <div className="mb-2 flex items-center gap-3">
+                      <div
+                        className={cn(
+                          "h-2 w-2 rounded-full transition-all flex-shrink-0",
+                          isActive ? "bg-emerald-500" : "bg-zinc-700 group-hover:bg-zinc-600"
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          "text-base font-medium transition-colors",
+                          isActive ? "text-white" : "text-zinc-500 group-hover:text-zinc-300"
+                        )}
+                      >
+                        {option.label}
+                      </span>
+                    </div>
+                    <p
+                      className={cn(
+                        "text-sm leading-relaxed transition-colors mt-1 pl-5",
+                        isActive ? "text-zinc-400" : "text-zinc-600 group-hover:text-zinc-500"
+                      )}
+                    >
+                      {option.description}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        )}
 
-        <div className="flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end pt-4">
-          <Button
-            variant="secondary"
-            size="sm"
-            className="w-full gap-2 sm:w-auto"
-            onClick={handleReset}
-            disabled={isGenerating}
-          >
-            <RefreshCcw className="w-3.5 h-3.5 text-zinc-400" />
-            Reset
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            className="w-full gap-2 sm:w-auto"
-            onClick={handleGenerate}
-            disabled={isGenerating}
-          >
-            {isGenerating ? (
-              <>Generating...</>
-            ) : (
-              <>
-                <PackagePlus className="w-4 h-4" />
-                Generate ZIP
-              </>
-            )}
-          </Button>
+          {/* Right Column: Configuration & Actions */}
+          <div className="space-y-8 md:pt-2">
+            <div className="space-y-1 mb-8">
+              <h2 className="text-2xl font-medium tracking-tight text-white">
+                Configuration
+              </h2>
+              <p className="text-sm text-zinc-400">
+                {activeForm === "go-release"
+                  ? "Configure your Go binary packaging details."
+                  : "Specify registry setup for the npm wrapper package."}
+              </p>
+            </div>
+
+            <div className={cn(isGenerating && "opacity-60 pointer-events-none", "space-y-8")}>
+              {/* Active Form */}
+              {activeForm === "go-release" ? (
+                <GoReleaseForm data={goData} onChange={setGoData} />
+              ) : (
+                <NpmWrapperForm data={npmData} onChange={setNpmData} />
+              )}
+
+              {error && (
+                <div className="rounded-md bg-red-500/10 px-4 py-3 border border-red-500/20 text-sm text-red-400">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex flex-col-reverse items-stretch gap-4 sm:flex-row sm:items-center sm:justify-end pt-8 border-t border-zinc-800/50">
+                <Button
+                  variant="ghost"
+                  className="w-full gap-2 sm:w-auto text-zinc-400 hover:text-white bg-transparent hover:bg-zinc-900 sm:min-w-32"
+                  onClick={handleReset}
+                  disabled={isGenerating}
+                >
+                  <RefreshCcw className="w-4 h-4" />
+                  Reset
+                </Button>
+                <Button
+                  className={cn(
+                    "w-full gap-2 sm:w-auto sm:min-w-32 font-bold uppercase tracking-wider text-xs",
+                    "bg-white text-black border-2 border-white",
+                    "shadow-[4px_4px_0_0_#52525b]",
+                    "hover:bg-zinc-100 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#52525b]",
+                    "active:translate-x-[4px] active:translate-y-[4px] active:shadow-none",
+                    "transition-all rounded-none"
+                  )}
+                  onClick={handleGenerate}
+                  disabled={isGenerating}
+                >
+                  {isGenerating ? (
+                    <>Generating...</>
+                  ) : (
+                    <>
+                      <PackagePlus className="w-4 h-4" />
+                      Generate ZIP
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
