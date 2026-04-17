@@ -113,6 +113,20 @@ export default function ResultPage() {
   const selectedFile = activeFile && fileContents[activeFile] !== undefined ? activeFile : defaultFile;
 
   useEffect(() => {
+    // Workaround for Monaco Editor crash in Firefox: "can't access property 'offsetNode', hitResult is null"
+    if (typeof window !== "undefined" && typeof document.caretPositionFromPoint === "function") {
+      const originalCaretPositionFromPoint = document.caretPositionFromPoint.bind(document);
+      document.caretPositionFromPoint = (x: number, y: number) => {
+        const result = originalCaretPositionFromPoint(x, y);
+        if (result === null) {
+          return { offsetNode: document.body, offset: 0 } as any;
+        }
+        return result;
+      };
+    }
+  }, []);
+
+  useEffect(() => {
     if (!editorRef.current || !selectedFile) return;
 
     const layoutEditor = () => editorRef.current?.layout();
@@ -248,11 +262,26 @@ export default function ResultPage() {
               <div className="space-y-2">
                 <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Target Platforms ({resultData.summary.platforms?.length || 0})</p>
                 <div className="flex flex-wrap gap-2">
-                  {resultData.summary.platforms?.map((platform) => (
-                    <span key={platform} className="text-xs font-mono rounded bg-white/[0.04] border border-white/[0.08] px-2 py-1 text-zinc-300">
-                      {platform}
-                    </span>
-                  ))}
+                  {resultData.summary.platforms?.map((platform) => {
+                    let iconUrl = "";
+                    const p = platform.toLowerCase();
+                    if (p.includes("linux")) iconUrl = "https://files.svgcdn.io/flat-color-icons/linux.svg";
+                    else if (p.includes("darwin") || p.includes("mac")) iconUrl = "https://files.svgcdn.io/qlementine-icons/mac-16.svg";
+                    else if (p.includes("windows")) iconUrl = "https://files.svgcdn.io/devicon/windows8.svg";
+
+                    return (
+                      <span key={platform} className="inline-flex items-center gap-1.5 text-xs font-mono rounded bg-white/[0.04] border border-white/[0.08] px-2.5 py-1 text-zinc-300">
+                        {iconUrl && (
+                          <img 
+                            src={iconUrl} 
+                            alt={platform} 
+                            className={`w-3.5 h-3.5 ${p.includes("darwin") || p.includes("mac") ? "invert opacity-80" : ""}`} 
+                          />
+                        )}
+                        {platform}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
 
