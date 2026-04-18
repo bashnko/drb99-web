@@ -10,6 +10,8 @@ export interface NpmWrapperFormData {
   repoUrl: string;
   cliCommandName: string;
   packageName: string;
+  license: string;
+  description: string;
   version: string;
   platforms: string[];
   assetUrls: Record<string, string>;
@@ -19,6 +21,8 @@ export const INITIAL_NPM_WRAPPER_DATA: NpmWrapperFormData = {
   repoUrl: "",
   cliCommandName: "",
   packageName: "",
+  license: "MIT",
+  description: "",
   version: "",
   platforms: [],
   assetUrls: {},
@@ -30,27 +34,42 @@ interface NpmWrapperFormProps {
 }
 
 export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
+  // Keep inputs controlled even if older persisted state is missing new keys.
+  const safeData: NpmWrapperFormData = {
+    repoUrl: data.repoUrl ?? "",
+    cliCommandName: data.cliCommandName ?? "",
+    packageName: data.packageName ?? "",
+    license: data.license ?? "MIT",
+    description: data.description ?? "",
+    version: data.version ?? "",
+    platforms: data.platforms ?? [],
+    assetUrls: data.assetUrls ?? {},
+  };
+
   const update = <Key extends keyof NpmWrapperFormData>(
     key: Key,
     value: NpmWrapperFormData[Key]
   ) => {
-    onChange({ ...data, [key]: value });
+    onChange({ ...safeData, [key]: value });
   };
 
   const updateCommandName = (cliCommandName: string) => {
     onChange({
-      ...data,
+      ...safeData,
       cliCommandName,
-      packageName: cliCommandName,
+      description:
+        safeData.description?.trim()
+          ? safeData.description
+          : `npm wrapper for ${cliCommandName}`,
     });
   };
 
   const togglePlatform = (platformId: PlatformId, checked: boolean) => {
     const platforms = checked
-      ? [...new Set([...data.platforms, platformId])]
-      : data.platforms.filter((platform) => platform !== platformId);
+      ? [...new Set([...safeData.platforms, platformId])]
+      : safeData.platforms.filter((platform) => platform !== platformId);
 
-    const assetUrls = { ...data.assetUrls };
+    const assetUrls = { ...safeData.assetUrls };
 
     if (!checked) {
       delete assetUrls[platformId];
@@ -59,18 +78,18 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
     }
 
     onChange({
-      ...data,
+      ...safeData,
       platforms,
       assetUrls,
     });
   };
 
   const updateAssetUrl = (platformId: PlatformId, url: string) => {
-    update("assetUrls", { ...data.assetUrls, [platformId]: url });
+    update("assetUrls", { ...safeData.assetUrls, [platformId]: url });
   };
 
   const selectedPlatforms = PLATFORM_OPTIONS.filter((platform) =>
-    data.platforms.includes(platform.id)
+    safeData.platforms.includes(platform.id)
   );
 
   return (
@@ -81,7 +100,7 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
           <Input
             id="npm-repo-url"
             placeholder="github.com/user/repo"
-            value={data.repoUrl}
+            value={safeData.repoUrl}
             onChange={(event) => update("repoUrl", event.target.value)}
             className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-lg transition-all"
           />
@@ -91,7 +110,7 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
           <Input
             id="npm-cli-command"
             placeholder="mytool"
-            value={data.cliCommandName}
+            value={safeData.cliCommandName}
             onChange={(event) => updateCommandName(event.target.value)}
             className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-lg transition-all"
           />
@@ -101,11 +120,54 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
           <Input
             id="npm-version"
             placeholder="1.0.0"
-            value={data.version}
+            value={safeData.version}
             onChange={(event) => update("version", event.target.value)}
             className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-lg transition-all"
           />
         </div>
+      </div>
+
+      <div className="grid gap-6 sm:grid-cols-2">
+        <div className="space-y-2.5">
+          <Label htmlFor="npm-package-name" className="text-zinc-400 text-sm">Package Name</Label>
+          <Input
+            id="npm-package-name"
+            placeholder="mytool-cli"
+            value={safeData.packageName}
+            onChange={(event) => update("packageName", event.target.value)}
+            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-lg transition-all"
+          />
+        </div>
+        <div className="space-y-2.5">
+          <Label htmlFor="npm-license" className="text-zinc-400 text-sm">License (optional)</Label>
+          <Input
+            id="npm-license"
+            placeholder="MIT"
+            value={safeData.license}
+            onChange={(event) => update("license", event.target.value)}
+            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-lg transition-all"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2.5">
+        <Label htmlFor="npm-description" className="text-zinc-400 text-sm">Description (optional)</Label>
+        <textarea
+          id="npm-description"
+          placeholder={
+            safeData.cliCommandName.trim()
+              ? `npm wrapper for ${safeData.cliCommandName}`
+              : "npm wrapper for <binary_name>"
+          }
+          value={safeData.description}
+          onChange={(event) => update("description", event.target.value)}
+          rows={6}
+          className={cn(
+            "w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white placeholder:text-zinc-500",
+            "focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500",
+            "transition-all resize-y"
+          )}
+        />
       </div>
 
       <Separator className="bg-zinc-800/50" />
@@ -115,7 +177,7 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
           <Label className="text-zinc-400 text-sm">Target Platforms</Label>
           <div className="grid grid-cols-3 gap-4">
             {PLATFORM_OPTIONS.map((platform) => {
-              const isChecked = data.platforms.includes(platform.id);
+              const isChecked = safeData.platforms.includes(platform.id);
 
               return (
                 <div
@@ -161,7 +223,7 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
                   <Input
                     id={`npm-asset-${platform.id}`}
                     placeholder={`https://.../${platform.id}-binary`}
-                    value={data.assetUrls[platform.id] ?? ""}
+                    value={safeData.assetUrls[platform.id] ?? ""}
                     onChange={(event) =>
                       updateAssetUrl(platform.id, event.target.value)
                     }

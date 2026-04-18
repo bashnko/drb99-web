@@ -68,9 +68,17 @@ function buildNpmWrapperPayload(data: NpmWrapperFormData) {
     ])
   );
 
+  const binaryName = data.cliCommandName.trim();
+  const description = data.description.trim()
+    ? data.description.trim()
+    : `npm wrapper for ${binaryName}`;
+
   return {
     repo_url: data.repoUrl,
     binary_name: data.cliCommandName,
+    package_name: data.packageName,
+    license: data.license?.trim() || "MIT",
+    description,
     version: data.version,
     platforms: mapPlatformsList(data.platforms),
     mode: "manual" as const,

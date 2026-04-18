@@ -6,6 +6,7 @@ const GITHUB_REPO_PATTERN =
 
 const CLI_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
 const VERSION_PATTERN = /^v?\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?$/;
+const NPM_PACKAGE_NAME_PATTERN = /^(?:@[^/\s]+\/)?[a-z0-9][a-z0-9._-]*$/;
 
 function isValidUrl(value: string) {
   try {
@@ -77,6 +78,15 @@ export function validateNpmWrapperForm(data: NpmWrapperFormData) {
 
   if (!VERSION_PATTERN.test(version)) {
     return "Enter a version like `1.0.0` or `v1.0.0`.";
+  }
+
+  const packageName = data.packageName.trim();
+  if (!packageName) {
+    return "Package name is required for the npm wrapper workflow.";
+  }
+
+  if (!NPM_PACKAGE_NAME_PATTERN.test(packageName)) {
+    return "Enter a valid npm package name (lowercase, optionally scoped like `@scope/name`).";
   }
 
   for (const platform of data.platforms) {

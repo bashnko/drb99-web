@@ -26,7 +26,7 @@ function getServerErrorMessage(status?: number, serverMessage?: unknown) {
 
 export async function generatePackage(payload: unknown) {
   try {
-    const response = await axiosInstance.post("/generate", payload);
+    const response = await axiosInstance.post("/api/v1/generate", payload);
 
     return response.data;
   } catch (error: unknown) {

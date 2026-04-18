@@ -119,7 +119,11 @@ export default function ResultPage() {
       document.caretPositionFromPoint = (x: number, y: number) => {
         const result = originalCaretPositionFromPoint(x, y);
         if (result === null) {
-          return { offsetNode: document.body, offset: 0 } as any;
+          return {
+            offsetNode: document.body,
+            offset: 0,
+            getClientRect: () => document.body.getBoundingClientRect(),
+          } satisfies CaretPosition;
         }
         return result;
       };
