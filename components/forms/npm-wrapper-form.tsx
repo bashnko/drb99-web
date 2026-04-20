@@ -34,7 +34,6 @@ interface NpmWrapperFormProps {
 }
 
 export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
-  // Keep inputs controlled even if older persisted state is missing new keys.
   const safeData: NpmWrapperFormData = {
     repoUrl: data.repoUrl ?? "",
     cliCommandName: data.cliCommandName ?? "",
@@ -71,9 +70,7 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
 
     const assetUrls = { ...safeData.assetUrls };
 
-    if (!checked) {
-      delete assetUrls[platformId];
-    } else if (!(platformId in assetUrls)) {
+    if (checked && !(platformId in assetUrls)) {
       assetUrls[platformId] = "";
     }
 
@@ -102,7 +99,7 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
             placeholder="github.com/user/repo"
             value={safeData.repoUrl}
             onChange={(event) => update("repoUrl", event.target.value)}
-            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-lg transition-all"
+            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-none transition-all"
           />
         </div>
         <div className="space-y-2.5">
@@ -112,7 +109,7 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
             placeholder="mytool"
             value={safeData.cliCommandName}
             onChange={(event) => updateCommandName(event.target.value)}
-            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-lg transition-all"
+            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-none transition-all"
           />
         </div>
         <div className="space-y-2.5">
@@ -122,7 +119,7 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
             placeholder="1.0.0"
             value={safeData.version}
             onChange={(event) => update("version", event.target.value)}
-            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-lg transition-all"
+            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-none transition-all"
           />
         </div>
       </div>
@@ -135,7 +132,7 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
             placeholder="mytool-cli"
             value={safeData.packageName}
             onChange={(event) => update("packageName", event.target.value)}
-            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-lg transition-all"
+            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-none transition-all"
           />
         </div>
         <div className="space-y-2.5">
@@ -145,7 +142,7 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
             placeholder="MIT"
             value={safeData.license}
             onChange={(event) => update("license", event.target.value)}
-            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-lg transition-all"
+            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-none transition-all"
           />
         </div>
       </div>
@@ -163,7 +160,7 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
           onChange={(event) => update("description", event.target.value)}
           rows={6}
           className={cn(
-            "w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white placeholder:text-zinc-500",
+            "w-full rounded-none border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white placeholder:text-zinc-500",
             "focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500",
             "transition-all resize-y"
           )}
@@ -192,7 +189,7 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
                     }
                   }}
                   className={cn(
-                    "group flex cursor-pointer flex-col items-center justify-center rounded-xl border p-4 transition-all outline-none focus-visible:ring-2 focus-visible:ring-zinc-400",
+                    "group flex cursor-pointer flex-col items-center justify-center rounded-none border p-4 transition-all outline-none focus-visible:ring-2 focus-visible:ring-zinc-400",
                     isChecked
                       ? "border-zinc-400 bg-zinc-800/50"
                       : "border-zinc-800 bg-transparent hover:border-zinc-700 hover:bg-zinc-900/30"
@@ -227,7 +224,7 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
                     onChange={(event) =>
                       updateAssetUrl(platform.id, event.target.value)
                     }
-                    className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-lg transition-all"
+                    className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-none transition-all"
                   />
                 </div>
               ))}

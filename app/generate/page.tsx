@@ -1,302 +1,215 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, PackagePlus, RefreshCcw } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  GoReleaseForm,
-  INITIAL_GO_RELEASE_DATA,
-  type GoReleaseFormData,
-} from "@/components/forms/go-release-form";
-import {
-  NpmWrapperForm,
-  INITIAL_NPM_WRAPPER_DATA,
-  type NpmWrapperFormData,
-} from "@/components/forms/npm-wrapper-form";
-import { cn } from "@/lib/utils";
-import { generatePackage } from "@/lib/api";
-import { mapPlatform, mapPlatformsList } from "@/lib/platforms";
-import type { SessionData } from "@/lib/generated-result";
-import {
-  validateGoReleaseForm,
-  validateNpmWrapperForm,
-} from "@/lib/validation";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { DistributorSelector } from "@/components/forms/distributor-selector";
+import { INITIAL_GO_RELEASE_DATA, type GoReleaseFormData } from "@/components/forms/go-release-form";
+import { INITIAL_NPM_WRAPPER_DATA, type NpmWrapperFormData } from "@/components/forms/npm-wrapper-form";
+import { prefillFormData } from "@/lib/api";
+import { useAppContext, type DistributorType, type PrefillResponse } from "@/lib/app-context";
 
-type ActiveForm = "go-release" | "npm-wrapper";
-type GeneratedFiles = Record<string, string>;
+function toUiPlatform(platform: string): string {
+  const value = platform.toLowerCase();
 
-const FORM_OPTIONS: { id: ActiveForm; label: string; description: string }[] = [
-  {
-    id: "go-release",
-    label: "Go Release",
-    description: "Package a Go binary for npm distribution",
-  },
-  {
-    id: "npm-wrapper",
-    label: "NPM Wrapper",
-    description: "Create an npm wrapper around an existing binary",
-  },
-];
+  if (value.includes("linux")) return "linux";
+  if (value.includes("darwin") || value.includes("mac")) return "darwin";
+  if (value.includes("windows")) return "windows";
 
-function buildGoReleasePayload(data: GoReleaseFormData) {
+  return platform;
+}
+
+function toUiAssetUrls(assetUrls: Record<string, string> | undefined): Record<string, string> {
+  if (!assetUrls) {
+    return {};
+  }
+
+  return Object.entries(assetUrls).reduce<Record<string, string>>((accumulator, [platform, url]) => {
+    accumulator[toUiPlatform(platform)] = url;
+    return accumulator;
+  }, {});
+}
+
+function buildNpmData(repoUrl: string, prefill: PrefillResponse): NpmWrapperFormData {
+  const binaryName = prefill.binary_name?.trim() ?? "";
+  const platforms = Array.isArray(prefill.platforms)
+    ? prefill.platforms.map((platform) => toUiPlatform(platform))
+    : [];
+
   return {
-    repo_url: data.repoUrl,
-    binary_name: data.binaryName,
-    platforms: mapPlatformsList(data.platforms),
-    features: {
-      npm_wrapper: false,
-      goreleaser: true,
-      github_actions: true,
-    },
+    ...INITIAL_NPM_WRAPPER_DATA,
+    repoUrl,
+    cliCommandName: binaryName,
+    packageName: prefill.package_name?.trim() ?? "",
+    license: prefill.license?.trim() || "MIT",
+    description: prefill.description?.trim() ?? "",
+    version: prefill.version?.trim() ?? "",
+    platforms,
+    assetUrls: toUiAssetUrls(prefill.asset_urls),
   };
 }
 
-function buildNpmWrapperPayload(data: NpmWrapperFormData) {
-  const asset_urls = Object.fromEntries(
-    data.platforms.map((platform) => [
-      mapPlatform(platform),
-      data.assetUrls[platform] ?? "",
-    ])
-  );
-
-  const binaryName = data.cliCommandName.trim();
-  const description = data.description.trim()
-    ? data.description.trim()
-    : `npm wrapper for ${binaryName}`;
+function buildGoData(repoUrl: string, prefill: PrefillResponse): GoReleaseFormData {
+  const binaryName = prefill.binary_name?.trim() ?? "";
+  const platforms = Array.isArray(prefill.platforms)
+    ? prefill.platforms.map((platform) => toUiPlatform(platform))
+    : [];
 
   return {
-    repo_url: data.repoUrl,
-    binary_name: data.cliCommandName,
-    package_name: data.packageName,
-    license: data.license?.trim() || "MIT",
-    description,
-    version: data.version,
-    platforms: mapPlatformsList(data.platforms),
-    mode: "manual" as const,
-    features: {
-      npm_wrapper: true,
-      goreleaser: false,
-      github_actions: false,
-    },
-    asset_urls,
+    ...INITIAL_GO_RELEASE_DATA,
+    repoUrl,
+    binaryName,
+    packageName: prefill.package_name?.trim() || binaryName,
+    description: prefill.description?.trim() ?? "",
+    platforms,
   };
-}
-
-function createSessionData(
-  workflow: ActiveForm,
-  summary: SessionData["summary"],
-  files: GeneratedFiles
-): SessionData {
-  return {
-    workflow,
-    summary,
-    files,
-  };
-}
-
-function validateActiveForm(
-  activeForm: ActiveForm,
-  goData: GoReleaseFormData,
-  npmData: NpmWrapperFormData
-) {
-  return activeForm === "go-release"
-    ? validateGoReleaseForm(goData)
-    : validateNpmWrapperForm(npmData);
 }
 
 export default function GeneratePage() {
   const router = useRouter();
-  const [activeForm, setActiveForm] = React.useState<ActiveForm>("go-release");
-  const [goData, setGoData] = React.useState<GoReleaseFormData>(
-    INITIAL_GO_RELEASE_DATA
-  );
-  const [npmData, setNpmData] = React.useState<NpmWrapperFormData>(
-    INITIAL_NPM_WRAPPER_DATA
-  );
+  const {
+    repoUrl,
+    setRepoUrl,
+    selectedDistributors,
+    toggleDistributor,
+    setActiveDistributor,
+    setNpmWrapperData,
+    setGoReleaserData,
+    prefillRepoUrl,
+    setPrefillRepoUrl,
+    setPrefillIssue,
+  } = useAppContext();
 
-  const [isGenerating, setIsGenerating] = React.useState(false);
+  const [isContinuing, setIsContinuing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const handleReset = () => {
-    if (activeForm === "go-release") {
-      setGoData(INITIAL_GO_RELEASE_DATA);
-    } else {
-      setNpmData(INITIAL_NPM_WRAPPER_DATA);
+  const handleContinue = async () => {
+    const normalizedRepoUrl = repoUrl.trim();
+
+    if (!normalizedRepoUrl) {
+      setError("Repository URL is required.");
+      return;
     }
-    setError(null);
-  };
 
-  const handleGenerate = async () => {
-    const validationError = validateActiveForm(activeForm, goData, npmData);
-
-    if (validationError) {
-      setError(validationError);
+    if (selectedDistributors.size === 0) {
+      setError("Select at least one distributor.");
       return;
     }
 
     setError(null);
-    setIsGenerating(true);
+    setIsContinuing(true);
 
     try {
-      const payload =
-        activeForm === "go-release"
-          ? buildGoReleasePayload(goData)
-          : buildNpmWrapperPayload(npmData);
+      setRepoUrl(normalizedRepoUrl);
 
-      const result = await generatePackage(payload);
-      const sessionData = createSessionData(activeForm, payload, result.files);
+      if (prefillRepoUrl !== normalizedRepoUrl) {
+        const prefill = (await prefillFormData(normalizedRepoUrl)) as PrefillResponse;
 
-      sessionStorage.setItem("generated-result", JSON.stringify(sessionData));
+        setNpmWrapperData(buildNpmData(normalizedRepoUrl, prefill));
+        setGoReleaserData(buildGoData(normalizedRepoUrl, prefill));
+        setPrefillRepoUrl(normalizedRepoUrl);
+        setPrefillIssue(null);
+      }
+
+      const firstDistributor = Array.from(selectedDistributors)[0] ?? null;
+      setActiveDistributor(firstDistributor as DistributorType | null);
       router.push("/result");
-    } catch (error: unknown) {
-      setError(
-        error instanceof Error ? error.message : "Failed to generate package"
-      );
+    } catch (prefillError) {
+      setPrefillIssue(prefillError instanceof Error ? prefillError.message : "Prefill failed");
+
+      setNpmWrapperData({
+        ...INITIAL_NPM_WRAPPER_DATA,
+        repoUrl: normalizedRepoUrl,
+      });
+      setGoReleaserData({
+        ...INITIAL_GO_RELEASE_DATA,
+        repoUrl: normalizedRepoUrl,
+      });
+      setPrefillRepoUrl(null);
+
+      const firstDistributor = Array.from(selectedDistributors)[0] ?? null;
+      setActiveDistributor(firstDistributor as DistributorType | null);
+      router.push("/result");
     } finally {
-      setIsGenerating(false);
+      setIsContinuing(false);
     }
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-black px-6 py-12 font-sans text-zinc-50 selection:bg-zinc-800">
-      <div className="w-full max-w-6xl mx-auto">
-        <div className="relative md:absolute top-0 left-0 md:top-8 md:left-8 z-20 w-full md:w-auto mb-10 md:mb-0">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-white"
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+      <header className="border-b border-zinc-800 px-4 py-4 sm:px-6">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-zinc-400 hover:text-white"
+              onClick={() => router.back()}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+            <h1 className="text-lg font-medium tracking-wide">DRB99</h1>
+          </div>
+
+          <Button
+            onClick={handleContinue}
+            disabled={isContinuing || selectedDistributors.size === 0}
+            className="h-9 border border-zinc-100 bg-zinc-100 px-5 text-zinc-900 hover:bg-white disabled:opacity-40"
           >
-            <ArrowLeft className="w-4 h-4" />
-            Back to home
-          </Link>
+            {isContinuing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Prefilling...
+              </>
+            ) : (
+              "Continue"
+            )}
+          </Button>
         </div>
+      </header>
 
-        <div className="mt-8 md:mt-24 grid md:grid-cols-[350px_1fr] gap-12">
-          {/* Left Column: Workflow Selection */}
-          <div className="md:sticky md:top-12 space-y-6 self-start">
-            <h2 className="text-xl font-medium tracking-tight text-white mb-2">
-              Choose your workflow
-            </h2>
-            <div className="grid grid-cols-1 gap-4">
-              {FORM_OPTIONS.map((option) => {
-                const isActive = activeForm === option.id;
-                return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    disabled={isGenerating}
-                    onClick={() => {
-                      setActiveForm(option.id);
-                      setError(null);
-                    }}
-                    className={cn(
-                      "group relative flex cursor-pointer flex-col items-start rounded-xl border p-5 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60",
-                      isActive
-                        ? "border-zinc-400 bg-zinc-900/40"
-                        : "border-zinc-800 bg-transparent hover:border-zinc-700"
-                    )}
-                  >
-                    <div className="mb-2 flex items-center gap-3">
-                      <div
-                        className={cn(
-                          "h-2 w-2 rounded-full transition-all flex-shrink-0",
-                          isActive ? "bg-emerald-500" : "bg-zinc-700 group-hover:bg-zinc-600"
-                        )}
-                      />
-                      <span
-                        className={cn(
-                          "text-base font-medium transition-colors",
-                          isActive ? "text-white" : "text-zinc-500 group-hover:text-zinc-300"
-                        )}
-                      >
-                        {option.label}
-                      </span>
-                    </div>
-                    <p
-                      className={cn(
-                        "text-sm leading-relaxed transition-colors mt-1 pl-5",
-                        isActive ? "text-zinc-400" : "text-zinc-600 group-hover:text-zinc-500"
-                      )}
-                    >
-                      {option.description}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
+      <main className="px-4 py-5 sm:px-6">
+        <Card className="border-zinc-800 bg-zinc-950 rounded-none">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium uppercase tracking-wide text-zinc-300">Repository URL</CardTitle>
+            <CardDescription className="text-zinc-500">This URL is used for prefill and generation context.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Label htmlFor="repo-url" className="sr-only">
+              Repository URL
+            </Label>
+            <Input
+              id="repo-url"
+              placeholder="https://github.com/owner/repo"
+              value={repoUrl}
+              onChange={(event) => {
+                setRepoUrl(event.target.value);
+                setError(null);
+              }}
+              className="h-11 border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-400 focus:ring-0 rounded-none"
+            />
+          </CardContent>
+        </Card>
+
+        <section className="mt-6">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-300">Distributors</h2>
+            <p className="text-xs text-zinc-500">Select one or more targets</p>
           </div>
+          <DistributorSelector selected={selectedDistributors} onChange={toggleDistributor} />
+        </section>
 
-          {/* Right Column: Configuration & Actions */}
-          <div className="space-y-8 md:pt-2">
-            <div className="space-y-1 mb-8">
-              <h2 className="text-2xl font-medium tracking-tight text-white">
-                Configuration
-              </h2>
-              <p className="text-sm text-zinc-400">
-                {activeForm === "go-release"
-                  ? "Configure your Go binary packaging details."
-                  : "Specify registry setup for the npm wrapper package."}
-              </p>
-            </div>
-
-            <div className={cn(isGenerating && "opacity-60 pointer-events-none", "space-y-8")}>
-              {/* Active Form */}
-              {activeForm === "go-release" ? (
-                <GoReleaseForm data={goData} onChange={setGoData} />
-              ) : (
-                <NpmWrapperForm data={npmData} onChange={setNpmData} />
-              )}
-
-              {error && (
-                <div className="rounded-md bg-red-500/10 px-4 py-3 border border-red-500/20 text-sm text-red-400">
-                  {error}
-                </div>
-              )}
-
-              <div className="flex flex-col-reverse items-stretch gap-4 sm:flex-row sm:items-center sm:justify-end pt-8 border-t border-zinc-800/50">
-                <Button
-                  variant="ghost"
-                  className="w-full gap-2 sm:w-auto text-zinc-400 hover:text-white bg-transparent hover:bg-zinc-900 sm:min-w-32"
-                  onClick={handleReset}
-                  disabled={isGenerating}
-                >
-                  <RefreshCcw className="w-4 h-4" />
-                  Reset
-                </Button>
-                <Button
-                  className={cn(
-                    "w-full gap-2 sm:w-auto sm:min-w-32 font-bold uppercase tracking-wider text-xs",
-                    "bg-white text-black border-2 border-white",
-                    "shadow-[4px_4px_0_0_#52525b]",
-                    "hover:bg-zinc-100 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_#52525b]",
-                    "active:translate-x-[4px] active:translate-y-[4px] active:shadow-none",
-                    "transition-all rounded-none"
-                  )}
-                  onClick={handleGenerate}
-                  disabled={isGenerating}
-                >
-                  {isGenerating ? (
-                    <>Generating...</>
-                  ) : (
-                    <>
-                      <PackagePlus className="w-4 h-4" />
-                      Generate ZIP
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
+        {error && (
+          <div className="mt-5 border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300">
+            {error}
           </div>
-        </div>
-      </div>
+        )}
+      </main>
     </div>
   );
 }

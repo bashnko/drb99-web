@@ -6,6 +6,7 @@ function getServerErrorMessage(status?: number, serverMessage?: unknown) {
     return serverMessage;
   }
 
+  // the drb99 api gives nice, and appripriate errors, maybe change to that. (for now this works)
   switch (status) {
     case 400:
       return "The server rejected this request. Check the form values and try again.";
@@ -21,6 +22,33 @@ function getServerErrorMessage(status?: number, serverMessage?: unknown) {
       return "The backend is temporarily unavailable. Try again in a moment.";
     default:
       return "The request failed while generating the package.";
+  }
+}
+
+export async function prefillFormData(repoUrl: string) {
+  try {
+    const response = await axiosInstance.post("/api/v1/prefill", {
+      repo_url: repoUrl,
+    });
+
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(
+        getServerErrorMessage(
+          error.response.status,
+          error.response.data?.message ?? error.response.data?.error
+        )
+      );
+    }
+
+    if (axios.isAxiosError(error) && error.request) {
+      throw new Error(
+        "Cannot reach the backend API. Check `NEXT_PUBLIC_API_BASE_URL` and make sure the backend server is running."
+      );
+    }
+
+    throw new Error("Failed to prefill form data.");
   }
 }
 

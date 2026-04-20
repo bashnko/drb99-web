@@ -55,7 +55,7 @@ export function GoReleaseForm({ data, onChange }: GoReleaseFormProps) {
             placeholder="github.com/user/repo"
             value={data.repoUrl}
             onChange={(event) => update("repoUrl", event.target.value)}
-            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-lg transition-all"
+            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-none transition-all"
           />
         </div>
         <div className="space-y-2.5">
@@ -65,7 +65,7 @@ export function GoReleaseForm({ data, onChange }: GoReleaseFormProps) {
             placeholder="mytool"
             value={data.binaryName}
             onChange={(event) => updateBinaryName(event.target.value)}
-            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-lg transition-all"
+            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-none transition-all"
           />
         </div>
       </div>
@@ -91,7 +91,7 @@ export function GoReleaseForm({ data, onChange }: GoReleaseFormProps) {
                   }
                 }}
                 className={cn(
-                  "group flex cursor-pointer flex-col items-center justify-center rounded-xl border p-4 transition-all outline-none focus-visible:ring-2 focus-visible:ring-zinc-400",
+                  "group flex cursor-pointer flex-col items-center justify-center rounded-none border p-4 transition-all outline-none focus-visible:ring-2 focus-visible:ring-zinc-400",
                   isChecked
                     ? "border-zinc-400 bg-zinc-800/50"
                     : "border-zinc-800 bg-transparent hover:border-zinc-700 hover:bg-zinc-900/30"

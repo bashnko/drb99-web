@@ -1,83 +1,36 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Editor, type OnMount } from "@monaco-editor/react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Copy, FileCode2, Check, DownloadCloud, Code2, Pencil, Lock } from "lucide-react";
-import Link from "next/link";
+import { ArrowLeft, Check, Copy, DownloadCloud, FileCode2, Lock, Pencil } from "lucide-react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import { Button } from "@/components/ui/button";
+import { GoReleaseForm } from "@/components/forms/go-release-form";
+import { NpmWrapperForm } from "@/components/forms/npm-wrapper-form";
+import { generatePackage } from "@/lib/api";
+import { useAppContext, type DistributorType } from "@/lib/app-context";
+import { getDistributorLabel } from "@/components/forms/distributor-selector";
+import { mapPlatform, mapPlatformsList } from "@/lib/platforms";
 
-interface SessionData {
-  workflow: "go-release" | "npm-wrapper";
-  summary: {
-    repo_url: string;
-    binary_name: string;
-    version?: string;
-    platforms: string[];
-    asset_urls?: Record<string, string>;
-    [key: string]: unknown;
-  };
+interface GeneratedResult {
   files: Record<string, string>;
+  summary: Record<string, unknown>;
 }
 
-const GENERATED_RESULT_KEY = "generated-result";
-let cachedGeneratedResultRaw: string | null = null;
-let cachedGeneratedResultParsed: SessionData | null = null;
+interface DistributorViewState {
+  result: GeneratedResult | null;
+  activeFile: string;
+  editedContents: Record<string, string>;
+  isEditing: boolean;
+}
 
-const subscribeToGeneratedResult = (callback: () => void) => {
-  if (typeof window === "undefined") {
-    return () => undefined;
-  }
+type ViewStateMap = Partial<Record<DistributorType, DistributorViewState>>;
 
-  const handleStorage = (event: StorageEvent) => {
-    if (event.key === GENERATED_RESULT_KEY) {
-      callback();
-    }
-  };
-
-  window.addEventListener("storage", handleStorage);
-  return () => window.removeEventListener("storage", handleStorage);
-};
-
-const readGeneratedResult = (): SessionData | null => {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const raw = sessionStorage.getItem(GENERATED_RESULT_KEY);
-  if (!raw) {
-    cachedGeneratedResultRaw = null;
-    cachedGeneratedResultParsed = null;
-    return null;
-  }
-
-  if (raw === cachedGeneratedResultRaw) {
-    return cachedGeneratedResultParsed;
-  }
-
-  try {
-    cachedGeneratedResultRaw = raw;
-    cachedGeneratedResultParsed = JSON.parse(raw) as SessionData;
-    return cachedGeneratedResultParsed;
-  } catch (err) {
-    console.error("Failed to parse session data", err);
-    cachedGeneratedResultRaw = null;
-    cachedGeneratedResultParsed = null;
-    return null;
-  }
-};
-
-const getLanguage = (filename: string) => {
+function getLanguage(filename: string) {
   const ext = filename.split(".").pop()?.toLowerCase();
+
   switch (ext) {
     case "json":
       return "json";
@@ -92,93 +45,235 @@ const getLanguage = (filename: string) => {
     default:
       return "plaintext";
   }
-};
+}
 
-export default function ResultPage() {
-  const resultData = useSyncExternalStore(
-    subscribeToGeneratedResult,
-    readGeneratedResult,
-    () => null
-  );
-  const [activeFile, setActiveFile] = useState<string>("");
-  const [editedContents, setEditedContents] = useState<Record<string, string>>({});
-  const [copied, setCopied] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
-  const fileContents = {
-    ...(resultData?.files ?? {}),
-    ...editedContents,
+function createDefaultViewState(): DistributorViewState {
+  return {
+    result: null,
+    activeFile: "",
+    editedContents: {},
+    isEditing: false,
   };
-  const defaultFile = Object.keys(resultData?.files ?? {})[0] ?? "";
-  const selectedFile = activeFile && fileContents[activeFile] !== undefined ? activeFile : defaultFile;
+}
+
+function isDistributorType(value: string | null): value is DistributorType {
+  return value === "npm_wrapper" || value === "goreleaser" || value === "github_actions";
+}
+
+function getCurrentFileContent(viewState: DistributorViewState, filename: string) {
+  if (!viewState.result || !filename) {
+    return "";
+  }
+
+  return viewState.editedContents[filename] ?? viewState.result.files[filename] ?? "";
+}
+
+function ResultPageContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+
+  const {
+    repoUrl,
+    selectedDistributors,
+    npmWrapperData,
+    setNpmWrapperData,
+    goReleaserData,
+    setGoReleaserData,
+    prefillIssue,
+  } = useAppContext();
+
+  const distributors = useMemo(
+    () => Array.from(selectedDistributors),
+    [selectedDistributors]
+  );
+
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [viewStates, setViewStates] = useState<ViewStateMap>({});
 
   useEffect(() => {
-    // Workaround for Monaco Editor crash in Firefox: "can't access property 'offsetNode', hitResult is null"
-    if (typeof window !== "undefined" && typeof document.caretPositionFromPoint === "function") {
-      const originalCaretPositionFromPoint = document.caretPositionFromPoint.bind(document);
-      document.caretPositionFromPoint = (x: number, y: number) => {
-        const result = originalCaretPositionFromPoint(x, y);
-        if (result === null) {
-          return {
-            offsetNode: document.body,
-            offset: 0,
-            getClientRect: () => document.body.getBoundingClientRect(),
-          } satisfies CaretPosition;
-        }
-        return result;
-      };
+    if (!repoUrl || distributors.length === 0) {
+      router.replace("/generate");
     }
-  }, []);
+  }, [repoUrl, distributors, router]);
+
+  const drbParam = searchParams.get("drb");
+  const firstDistributor = distributors[0] ?? null;
+  const activeDistributor: DistributorType | null = isDistributorType(drbParam) && distributors.includes(drbParam)
+    ? drbParam
+    : firstDistributor;
 
   useEffect(() => {
-    if (!editorRef.current || !selectedFile) return;
+    if (!activeDistributor) return;
+
+    if (drbParam !== activeDistributor) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("drb", activeDistributor);
+      router.replace(`${pathname}?${params.toString()}`);
+    }
+  }, [activeDistributor, drbParam, pathname, router, searchParams]);
+
+  useEffect(() => {
+    if (!editorRef.current) return;
 
     const layoutEditor = () => editorRef.current?.layout();
     const frame = requestAnimationFrame(layoutEditor);
-
     window.addEventListener("resize", layoutEditor);
 
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", layoutEditor);
     };
-  }, [isEditing, selectedFile]);
+  }, [activeDistributor, viewStates]);
+
+  const currentViewState = activeDistributor
+    ? viewStates[activeDistributor] ?? createDefaultViewState()
+    : createDefaultViewState();
+
+  const handleSidebarSelect = (distributor: DistributorType) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("drb", distributor);
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const setCurrentViewState = (updater: (prev: DistributorViewState) => DistributorViewState) => {
+    if (!activeDistributor) return;
+
+    setViewStates((prev) => {
+      const current = prev[activeDistributor] ?? createDefaultViewState();
+      return {
+        ...prev,
+        [activeDistributor]: updater(current),
+      };
+    });
+  };
+
+  const handleGenerateCurrent = async () => {
+    if (!activeDistributor) return;
+
+    try {
+      setIsGenerating(true);
+      setError(null);
+
+      const features = {
+        npm_wrapper: activeDistributor === "npm_wrapper",
+        goreleaser: activeDistributor === "goreleaser",
+        github_actions:
+          activeDistributor === "github_actions" ||
+          activeDistributor === "goreleaser",
+      };
+
+      const payload: Record<string, unknown> = {
+        repo_url: repoUrl,
+        features,
+      };
+
+      if (activeDistributor === "npm_wrapper") {
+        Object.assign(payload, {
+          binary_name: npmWrapperData.cliCommandName,
+          package_name: npmWrapperData.packageName,
+          license: npmWrapperData.license || "MIT",
+          description: npmWrapperData.description,
+          version: npmWrapperData.version,
+          platforms: mapPlatformsList(npmWrapperData.platforms),
+          mode: "manual",
+          asset_urls: Object.fromEntries(
+            npmWrapperData.platforms.map((platform) => [
+              mapPlatform(platform),
+              npmWrapperData.assetUrls[platform] ?? "",
+            ])
+          ),
+        });
+      }
+
+      if (activeDistributor === "goreleaser") {
+        Object.assign(payload, {
+          binary_name: goReleaserData.binaryName,
+          platforms: mapPlatformsList(goReleaserData.platforms),
+        });
+      }
+
+      if (activeDistributor === "github_actions") {
+        Object.assign(payload, {
+          binary_name: npmWrapperData.cliCommandName || goReleaserData.binaryName,
+          platforms: mapPlatformsList(
+            npmWrapperData.platforms.length > 0 ? npmWrapperData.platforms : goReleaserData.platforms
+          ),
+        });
+      }
+
+      const result = await generatePackage(payload);
+      const generated = {
+        files: result.files as Record<string, string>,
+        summary: payload,
+      };
+      const firstFile = Object.keys(generated.files)[0] ?? "";
+
+      setCurrentViewState(() => ({
+        result: generated,
+        activeFile: firstFile,
+        editedContents: {},
+        isEditing: false,
+      }));
+    } catch (generateError) {
+      setError(generateError instanceof Error ? generateError.message : "Failed to generate package");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleToggleEditing = () => {
+    setCurrentViewState((prev) => ({
+      ...prev,
+      isEditing: !prev.isEditing,
+    }));
+  };
+
+  const handleSelectFile = (filename: string) => {
+    setCurrentViewState((prev) => ({
+      ...prev,
+      activeFile: filename,
+    }));
+  };
 
   const handleEditorChange = (value: string | undefined) => {
-    if (value !== undefined && selectedFile) {
-      setEditedContents((prev) => ({ ...prev, [selectedFile]: value }));
-    }
+    if (!activeDistributor || !currentViewState.activeFile || value === undefined) return;
+
+    setCurrentViewState((prev) => ({
+      ...prev,
+      editedContents: {
+        ...prev.editedContents,
+        [prev.activeFile]: value,
+      },
+    }));
   };
 
   const handleCopy = () => {
-    if (!selectedFile || !fileContents[selectedFile]) return;
-    navigator.clipboard.writeText(fileContents[selectedFile]);
+    if (!currentViewState.activeFile) return;
+
+    const content = getCurrentFileContent(currentViewState, currentViewState.activeFile);
+    if (!content) return;
+
+    navigator.clipboard.writeText(content);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), 1500);
   };
 
   const handleDownloadZip = async () => {
-  
+    if (!currentViewState.result) return;
+
     const zip = new JSZip();
-    
-    
-    
-    Object.entries(fileContents).forEach(([filename, content]) => {
-      zip.file(filename, content);
+
+    Object.keys(currentViewState.result.files).forEach((filename) => {
+      zip.file(filename, getCurrentFileContent(currentViewState, filename));
     });
 
-  
-    const binaryName = resultData?.summary?.binary_name || "generated-package";
-    
-    try {
-   
-      const blob = await zip.generateAsync({ type: "blob" });
-      
-    
-      saveAs(blob, `${binaryName}.zip`);
-    } catch (err) {
-      console.error("Failed to generate ZIP", err);
-    }
+    const binaryName = (currentViewState.result.summary?.binary_name as string) || "generated-package";
+    const blob = await zip.generateAsync({ type: "blob" });
+    saveAs(blob, `${binaryName}-${activeDistributor}.zip`);
   };
 
   const handleEditorMount: OnMount = (editor) => {
@@ -186,263 +281,197 @@ export default function ResultPage() {
     editor.layout();
   };
 
-  if (!resultData) {
+  const renderForm = () => {
+    if (!activeDistributor) return null;
+
+    if (activeDistributor === "npm_wrapper") {
+      return <NpmWrapperForm data={npmWrapperData} onChange={setNpmWrapperData} />;
+    }
+
+    if (activeDistributor === "goreleaser") {
+      return <GoReleaseForm data={goReleaserData} onChange={setGoReleaserData} />;
+    }
+
     return (
-      <div className="min-h-screen bg-[#09090b] text-zinc-50 flex flex-col items-center justify-center font-sans gap-6">
-        <p className="text-zinc-400 text-sm">No generated result found. Go back and generate a package first.</p>
-        <Link href="/generate">
-          <Button variant="primary" size="sm">Go to Generate</Button>
-        </Link>
+      <div className="border border-zinc-800 bg-zinc-900 p-4 text-sm text-zinc-400">
+        GitHub Actions generator has no extra form fields. Use Generate to create workflow files.
+      </div>
+    );
+  };
+
+  if (!repoUrl || distributors.length === 0 || !activeDistributor) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-950">
+        <p className="text-zinc-500">Loading...</p>
       </div>
     );
   }
 
-  const isNpmWrapper = resultData.workflow === "npm-wrapper";
+  const hasResult = Boolean(currentViewState.result);
+  const fileList = hasResult ? Object.keys(currentViewState.result!.files) : [];
+  const selectedFile = currentViewState.activeFile || fileList[0] || "";
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#09090b] text-zinc-50 font-sans selection:bg-zinc-800">
-
-      <div className="w-full px-6 lg:px-10 py-6 flex flex-col flex-1 min-h-0 gap-6">
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 shrink-0">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-medium tracking-tight text-white">Generated Output</h1>
-            <p className="text-zinc-400 text-sm">Review, edit, and copy your generated files</p>
-          </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.02] px-3 py-1 text-sm font-medium text-zinc-300">
-            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            Workflow: {isNpmWrapper ? "NPM Wrapper" : "Go Release"}
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 shrink-0">
-          <Link href="/generate" className="inline-flex">
-            <Button variant="ghost" size="sm" className="gap-2 text-zinc-400 hover:text-white">
-              <ArrowLeft className="w-4 h-4" />
-              Back to edit
-            </Button>
-          </Link>
-          <Button variant="primary" size="sm" className="gap-2 w-full sm:w-auto" onClick={handleDownloadZip}>
-            <DownloadCloud className="w-4 h-4" />
-            Download ZIP
+    <div className="flex min-h-screen bg-zinc-950 text-zinc-100">
+      <aside className="w-64 shrink-0 border-r border-zinc-800">
+        <div className="flex h-12 items-center border-b border-zinc-800 px-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push("/generate")}
+            className="h-8 px-2 text-zinc-400 hover:text-white"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Generate
           </Button>
         </div>
 
-        {/* Main 2-Column Grid */}
-        <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-[800px] lg:min-h-[85vh] pb-6 lg:pb-8">
+        <nav>
+          {distributors.map((distributor) => {
+            const isActive = activeDistributor === distributor;
+            const generated = Boolean(viewStates[distributor]?.result);
 
-          {/* Left Panel - Input Summary */}
-          <Card className="flex flex-col lg:w-[320px] shrink-0 min-h-0 lg:h-full lg:max-h-full">
-            <CardHeader className="shrink-0">
-              <CardTitle>Input Summary</CardTitle>
-              <CardDescription>Values used for generation</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6 overflow-y-auto min-h-0 flex-1">
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Repository URL</p>
-                <p className="text-sm font-mono text-zinc-300 truncate" title={resultData.summary.repo_url}>
-                  {resultData.summary.repo_url || "N/A"}
-                </p>
-              </div>
+            return (
+              <button
+                key={distributor}
+                onClick={() => handleSidebarSelect(distributor)}
+                className={`flex h-14 w-full items-center justify-between border-b border-zinc-800 px-4 text-left text-sm ${
+                  isActive ? "bg-zinc-900 text-zinc-100" : "bg-transparent text-zinc-300 hover:bg-zinc-900"
+                }`}
+              >
+                <span>{getDistributorLabel(distributor)}</span>
+                <span className={`h-1.5 w-1.5 ${generated ? "bg-emerald-400" : "bg-zinc-700"}`} />
+              </button>
+            );
+          })}
+        </nav>
+      </aside>
 
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Binary Name</p>
-                <div className="inline-flex items-center gap-2 rounded-md bg-white/[0.04] px-2 py-1">
-                  <Code2 className="w-4 h-4 text-zinc-400" />
-                  <span className="text-sm font-mono text-zinc-200">{resultData.summary.binary_name || "N/A"}</span>
-                </div>
-              </div>
-
-              {isNpmWrapper && resultData.summary.version && (
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Version</p>
-                  <p className="text-sm font-mono text-zinc-300">{resultData.summary.version}</p>
-                </div>
-              )}
-
-              <Separator className="bg-white/[0.08]" />
-
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Target Platforms ({resultData.summary.platforms?.length || 0})</p>
-                <div className="flex flex-wrap gap-2">
-                  {resultData.summary.platforms?.map((platform) => {
-                    let iconUrl = "";
-                    const p = platform.toLowerCase();
-                    if (p.includes("linux")) iconUrl = "https://files.svgcdn.io/flat-color-icons/linux.svg";
-                    else if (p.includes("darwin") || p.includes("mac")) iconUrl = "https://files.svgcdn.io/qlementine-icons/mac-16.svg";
-                    else if (p.includes("windows")) iconUrl = "https://files.svgcdn.io/devicon/windows8.svg";
-
-                    return (
-                      <span key={platform} className="inline-flex items-center gap-1.5 text-xs font-mono rounded bg-white/[0.04] border border-white/[0.08] px-2.5 py-1 text-zinc-300">
-                        {iconUrl && (
-                          <img 
-                            src={iconUrl} 
-                            alt={platform} 
-                            className={`w-3.5 h-3.5 ${p.includes("darwin") || p.includes("mac") ? "invert opacity-80" : ""}`} 
-                          />
-                        )}
-                        {platform}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Display Asset URLs if NPM wrapper workflow and asset_urls exist */}
-              {isNpmWrapper && resultData.summary.asset_urls && Object.keys(resultData.summary.asset_urls).length > 0 && (
-                <>
-                  <Separator className="bg-white/[0.08]" />
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Asset URLs</p>
-                    <div className="space-y-2">
-                      {Object.entries(resultData.summary.asset_urls).map(([key, url]) => (
-                        <div key={key} className="space-y-1">
-                          <p className="text-[10px] text-zinc-500 uppercase">{key}</p>
-                          <p className="text-xs font-mono text-zinc-300 truncate" title={url as string}>
-                            {url as string || "None provided"}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-
-            </CardContent>
-          </Card>
-
-          {/* Right Panel - Workspace */}
-          <div className="flex-1 flex flex-col lg:flex-row min-h-[600px] lg:min-h-[85vh] min-w-0 rounded-xl border border-white/[0.08] bg-[#0c0c0e] overflow-hidden shadow-2xl">
-
-            {/* File Explorer Sidebar */}
-            <div className="w-full h-[30%] lg:h-auto lg:w-64 shrink-0 lg:shrink border-b lg:border-b-0 lg:border-r border-white/[0.08] flex flex-col bg-[#09090b] min-h-0">
-              <div className="px-4 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider border-b border-white/[0.08] flex items-center justify-between shrink-0">
-                <span>Explorer</span>
-              </div>
-              <div className="flex-1 overflow-y-auto py-2 min-h-0">
-                <div className="px-2 pb-1">
-                  <div className="px-2 py-1 text-xs font-medium text-zinc-400 flex items-center gap-1.5 opacity-80">
-                    <ChevronDownIcon className="w-3.5 h-3.5" />
-                    generated
-                  </div>
-                  <div className="mt-1 space-y-0.5">
-                    {Object.keys(resultData.files || {}).map((filename) => (
-                      <button
-                        key={filename}
-                        onClick={() => setActiveFile(filename)}
-                        className={`w-full flex items-center gap-2 px-6 py-1.5 text-sm transition-colors ${selectedFile === filename
-                          ? "bg-white/[0.08] text-white"
-                          : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200"
-                          }`}
-                      >
-                        <FileCode2 className={`w-4 h-4 ${selectedFile === filename ? "text-emerald-400" : "text-zinc-500"}`} />
-                        <span className="truncate">{filename}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+      <main className="flex min-w-0 flex-1 flex-col">
+        <header className="border-b border-zinc-800 px-5 py-3">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h1 className="text-sm font-medium uppercase tracking-wide text-zinc-300">
+                {getDistributorLabel(activeDistributor)}
+              </h1>
+              <p className="text-xs text-zinc-500">{repoUrl}</p>
             </div>
 
-            {/* Editor Content Area */}
-            <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-[#0c0c0e]">
-              <div className="shrink-0 flex flex-col gap-3 px-4 py-3 border-b border-white/[0.08] bg-[#09090b] sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2 text-sm text-zinc-300 px-3 py-1.5 bg-white/[0.04] rounded-md border border-white/[0.04]">
-                  <FileCode2 className="w-4 h-4 text-emerald-400" />
-                  {selectedFile || "Select a file"}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {!isEditing && selectedFile ? (
-                    <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-200">
-                      <span className="h-2 w-2 rounded-full bg-amber-300 animate-pulse" />
-                      Click Edit to modify this file
-                    </div>
-                  ) : null}
+            <div className="flex items-center gap-2">
+              {hasResult && (
+                <>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 gap-2 text-zinc-400 hover:text-white"
                     onClick={handleCopy}
-                    disabled={!selectedFile}
+                    className="h-8 gap-2 border border-zinc-700 text-zinc-300 hover:text-white"
                   >
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
                     {copied ? "Copied" : "Copy"}
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`h-8 gap-2 border transition-all ${isEditing
-                        ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/15 hover:text-emerald-200"
-                        : "border-amber-400/40 bg-amber-400/10 text-amber-200 shadow-[0_0_0_1px_rgba(251,191,36,0.08)] hover:border-amber-300/60 hover:bg-amber-400/15 hover:text-amber-100"
-                      }`}
-                    onClick={() => setIsEditing((prev) => !prev)}
-                    disabled={!selectedFile}
+                    onClick={handleToggleEditing}
+                    className="h-8 gap-2 border border-zinc-700 text-zinc-300 hover:text-white"
                   >
-                    {isEditing ? <Pencil className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
-                    {isEditing ? "Editing" : "Edit"}
+                    {currentViewState.isEditing ? <Pencil className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                    {currentViewState.isEditing ? "Editing" : "Read only"}
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDownloadZip}
+                    className="h-8 gap-2 border border-zinc-700 text-zinc-300 hover:text-white"
+                  >
+                    <DownloadCloud className="h-4 w-4" />
+                    Download
+                  </Button>
+                </>
+              )}
+
+              <Button
+                onClick={handleGenerateCurrent}
+                disabled={isGenerating}
+                className="h-8 border border-zinc-100 bg-zinc-100 px-4 text-zinc-900 hover:bg-white disabled:opacity-40"
+              >
+                {isGenerating ? "Generating..." : hasResult ? "Regenerate" : "Generate"}
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        {prefillIssue && (
+          <div className="border-b border-amber-900 bg-amber-950/30 px-5 py-2 text-xs text-amber-300">
+            Prefill notice: {prefillIssue}
+          </div>
+        )}
+
+        {error && (
+          <div className="border-b border-red-900 bg-red-950/30 px-5 py-2 text-xs text-red-300">{error}</div>
+        )}
+
+        <section className="flex min-h-0 flex-1">
+          {!hasResult ? (
+            <div className="w-full overflow-auto p-5">{renderForm()}</div>
+          ) : (
+            <>
+              <div className="w-64 shrink-0 border-r border-zinc-800">
+                <div className="border-b border-zinc-800 px-4 py-2 text-xs uppercase tracking-wide text-zinc-500">
+                  Files
+                </div>
+                <div>
+                  {fileList.map((filename) => (
+                    <button
+                      key={filename}
+                      onClick={() => handleSelectFile(filename)}
+                      className={`flex h-10 w-full items-center gap-2 border-b border-zinc-800 px-3 text-left text-sm ${
+                        selectedFile === filename
+                          ? "bg-zinc-900 text-zinc-100"
+                          : "text-zinc-300 hover:bg-zinc-900"
+                      }`}
+                    >
+                      <FileCode2 className="h-4 w-4" />
+                      <span className="truncate">{filename}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              <div className="flex-1 min-h-0 min-w-0 bg-[#111317]">
-                {selectedFile ? (
-                  <div className="h-full w-full overflow-hidden">
-                    <Editor
-                      height="100%"
-                      language={getLanguage(selectedFile)}
-                      theme="vs-dark"
-                      value={fileContents[selectedFile] || ""}
-                      onMount={handleEditorMount}
-                      onChange={isEditing ? handleEditorChange : undefined}
-                      options={{
-                        automaticLayout: true,
-                        minimap: { enabled: false },
-                        fontSize: 14,
-                        lineHeight: 24,
-                        padding: { top: 24, bottom: 24 },
-                        scrollBeyondLastLine: false,
-                        smoothScrolling: true,
-                        cursorBlinking: "smooth",
-                        readOnly: !isEditing,
-                        fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",
-                      }}
-                      loading={
-                        <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
-                          Loading editor...
-                        </div>
-                      }
-                    />
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
-                    No file selected
-                  </div>
-                )}
+              <div className="min-w-0 flex-1">
+                <Editor
+                  height="100%"
+                  language={getLanguage(selectedFile)}
+                  theme="vs-dark"
+                  value={getCurrentFileContent(currentViewState, selectedFile)}
+                  onMount={handleEditorMount}
+                  onChange={currentViewState.isEditing ? handleEditorChange : undefined}
+                  options={{
+                    automaticLayout: true,
+                    minimap: { enabled: false },
+                    readOnly: !currentViewState.isEditing,
+                    fontSize: 13,
+                  }}
+                />
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
+            </>
+          )}
+        </section>
+      </main>
     </div>
   );
 }
 
-function ChevronDownIcon(props: React.SVGProps<SVGSVGElement>) {
+export default function ResultPage() {
   return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+    <React.Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-500">
+          Loading result view...
+        </div>
+      }
     >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
+      <ResultPageContent />
+    </React.Suspense>
   );
 }
