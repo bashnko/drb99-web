@@ -22,7 +22,13 @@ const DISTRIBUTORS: DistributorOption[] = [
     label: "GoReleaser",
     description: "Generate GoReleaser configuration",
     iconPath: "/icons/go-releaser.svg",
-  }
+  },
+  {
+    id: "aur",
+    label: "AUR",
+    description: "Build PKGBUILD and aur.yaml",
+    iconPath: "/icons/aur.svg",
+  },
 ];
 
 interface DistributorSelectorProps {

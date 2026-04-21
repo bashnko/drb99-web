@@ -7,6 +7,7 @@ import { ArrowLeft, Check, Copy, DownloadCloud, FileCode2, Lock, Pencil } from "
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { Button } from "@/components/ui/button";
+import { AurForm } from "@/components/forms/aur-form";
 import { GoReleaseForm } from "@/components/forms/go-release-form";
 import { NpmWrapperForm } from "@/components/forms/npm-wrapper-form";
 import { generatePackage } from "@/lib/api";
@@ -57,7 +58,7 @@ function createDefaultViewState(): DistributorViewState {
 }
 
 function isDistributorType(value: string | null): value is DistributorType {
-  return value === "npm_wrapper" || value === "goreleaser" || value === "github_actions";
+  return value === "npm_wrapper" || value === "goreleaser" || value === "github_actions" || value === "aur";
 }
 
 function getCurrentFileContent(viewState: DistributorViewState, filename: string) {
@@ -77,6 +78,8 @@ function ResultPageContent() {
   const {
     repoUrl,
     selectedDistributors,
+    aurData,
+    setAurData,
     npmWrapperData,
     setNpmWrapperData,
     goReleaserData,
@@ -164,6 +167,7 @@ function ResultPageContent() {
         github_actions:
           activeDistributor === "github_actions" ||
           activeDistributor === "goreleaser",
+        aur: activeDistributor === "aur",
       };
 
       const payload: Record<string, unknown> = {
@@ -202,6 +206,15 @@ function ResultPageContent() {
           platforms: mapPlatformsList(
             npmWrapperData.platforms.length > 0 ? npmWrapperData.platforms : goReleaserData.platforms
           ),
+        });
+      }
+
+      if (activeDistributor === "aur") {
+        Object.assign(payload, {
+          binary_name: aurData.binaryName,
+          version: aurData.version,
+          license: aurData.license || "MIT",
+          description: aurData.description,
         });
       }
 
@@ -290,6 +303,10 @@ function ResultPageContent() {
 
     if (activeDistributor === "goreleaser") {
       return <GoReleaseForm data={goReleaserData} onChange={setGoReleaserData} />;
+    }
+
+    if (activeDistributor === "aur") {
+      return <AurForm data={aurData} onChange={setAurData} />;
     }
 
     return (

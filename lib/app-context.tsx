@@ -3,14 +3,18 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import type { NpmWrapperFormData } from "@/components/forms/npm-wrapper-form";
 import type { GoReleaseFormData } from "@/components/forms/go-release-form";
+import type { AurFormData } from "@/components/forms/aur-form";
 import {
   INITIAL_NPM_WRAPPER_DATA,
 } from "@/components/forms/npm-wrapper-form";
 import {
   INITIAL_GO_RELEASE_DATA,
 } from "@/components/forms/go-release-form";
+import {
+  INITIAL_AUR_FORM_DATA,
+} from "@/components/forms/aur-form";
 
-export type DistributorType = "npm_wrapper" | "goreleaser" | "github_actions";
+export type DistributorType = "npm_wrapper" | "goreleaser" | "github_actions" | "aur";
 
 export interface PrefillResponse {
   repo_url?: string;
@@ -39,6 +43,9 @@ export interface AppContextType {
   goReleaserData: GoReleaseFormData;
   setGoReleaserData: (data: GoReleaseFormData) => void;
 
+  aurData: AurFormData;
+  setAurData: (data: AurFormData) => void;
+
   prefillRepoUrl: string | null;
   setPrefillRepoUrl: (value: string | null) => void;
 
@@ -56,6 +63,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activeDistributor, setActiveDistributor] = useState<DistributorType | null>(null);
   const [npmWrapperData, setNpmWrapperData] = useState<NpmWrapperFormData>(INITIAL_NPM_WRAPPER_DATA);
   const [goReleaserData, setGoReleaserData] = useState<GoReleaseFormData>(INITIAL_GO_RELEASE_DATA);
+  const [aurData, setAurData] = useState<AurFormData>(INITIAL_AUR_FORM_DATA);
   const [prefillRepoUrl, setPrefillRepoUrl] = useState<string | null>(null);
   const [prefillIssue, setPrefillIssue] = useState<string | null>(null);
 
@@ -84,6 +92,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setActiveDistributor(null);
     setNpmWrapperData(INITIAL_NPM_WRAPPER_DATA);
     setGoReleaserData(INITIAL_GO_RELEASE_DATA);
+    setAurData(INITIAL_AUR_FORM_DATA);
     setPrefillRepoUrl(null);
     setPrefillIssue(null);
   };
@@ -101,6 +110,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setNpmWrapperData,
         goReleaserData,
         setGoReleaserData,
+        aurData,
+        setAurData,
         prefillRepoUrl,
         setPrefillRepoUrl,
         prefillIssue,

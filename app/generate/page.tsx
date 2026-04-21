@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DistributorSelector } from "@/components/forms/distributor-selector";
+import { INITIAL_AUR_FORM_DATA, type AurFormData } from "@/components/forms/aur-form";
 import { INITIAL_GO_RELEASE_DATA, type GoReleaseFormData } from "@/components/forms/go-release-form";
 import { INITIAL_NPM_WRAPPER_DATA, type NpmWrapperFormData } from "@/components/forms/npm-wrapper-form";
 import { prefillFormData } from "@/lib/api";
@@ -69,6 +70,19 @@ function buildGoData(repoUrl: string, prefill: PrefillResponse): GoReleaseFormDa
   };
 }
 
+function buildAurData(repoUrl: string, prefill: PrefillResponse): AurFormData {
+  const binaryName = prefill.binary_name?.trim() ?? "";
+
+  return {
+    ...INITIAL_AUR_FORM_DATA,
+    repoUrl,
+    binaryName,
+    version: prefill.version?.trim() ?? "",
+    license: prefill.license?.trim() || "MIT",
+    description: prefill.description?.trim() ?? "",
+  };
+}
+
 export default function GeneratePage() {
   const router = useRouter();
   const {
@@ -79,6 +93,7 @@ export default function GeneratePage() {
     setActiveDistributor,
     setNpmWrapperData,
     setGoReleaserData,
+    setAurData,
     prefillRepoUrl,
     setPrefillRepoUrl,
     setPrefillIssue,
@@ -111,6 +126,7 @@ export default function GeneratePage() {
 
         setNpmWrapperData(buildNpmData(normalizedRepoUrl, prefill));
         setGoReleaserData(buildGoData(normalizedRepoUrl, prefill));
+        setAurData(buildAurData(normalizedRepoUrl, prefill));
         setPrefillRepoUrl(normalizedRepoUrl);
         setPrefillIssue(null);
       }
@@ -127,6 +143,10 @@ export default function GeneratePage() {
       });
       setGoReleaserData({
         ...INITIAL_GO_RELEASE_DATA,
+        repoUrl: normalizedRepoUrl,
+      });
+      setAurData({
+        ...INITIAL_AUR_FORM_DATA,
         repoUrl: normalizedRepoUrl,
       });
       setPrefillRepoUrl(null);
