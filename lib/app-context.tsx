@@ -24,7 +24,7 @@ export interface PrefillResponse {
   description?: string;
   version?: string;
   platforms?: string[];
-  asset_urls?: Record<string, string>;
+  asset_urls?: Record<string, string[]>;
 }
 
 export interface AppContextType {

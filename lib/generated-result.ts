@@ -5,7 +5,7 @@ export interface GeneratedSummary {
   binary_name: string;
   version?: string;
   platforms: string[];
-  asset_urls?: Record<string, string>;
+  asset_urls?: Record<string, string[]>;
   [key: string]: unknown;
 }
 

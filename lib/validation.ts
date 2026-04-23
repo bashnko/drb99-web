@@ -10,7 +10,10 @@ const NPM_PACKAGE_NAME_PATTERN = /^(?:@[^/\s]+\/)?[a-z0-9][a-z0-9._-]*$/;
 
 function isValidUrl(value: string) {
   try {
-    const url = new URL(value);
+    const urlString = value.startsWith("http://") || value.startsWith("https://") 
+      ? value 
+      : `https://${value}`;
+    const url = new URL(urlString);
     return url.protocol === "http:" || url.protocol === "https:";
   } catch {
     return false;
@@ -90,14 +93,20 @@ export function validateNpmWrapperForm(data: NpmWrapperFormData) {
   }
 
   for (const platform of data.platforms) {
-    const assetUrl = data.assetUrls[platform]?.trim();
+    const urls = data.assetUrls[platform];
 
-    if (!assetUrl) {
-      return `Add an asset URL for ${platform}.`;
+    if (!urls || urls.length === 0) {
+      return `Add at least one asset URL for ${platform}.`;
     }
 
-    if (!isValidUrl(assetUrl)) {
-      return `Enter a valid http or https asset URL for ${platform}.`;
+    for (const url of urls) {
+      const trimmedUrl = url.trim();
+      if (!trimmedUrl) {
+        return `Empty asset URL found for ${platform}.`;
+      }
+      if (!isValidUrl(trimmedUrl)) {
+        return `Enter a valid http or https asset URL for ${platform}.`;
+      }
     }
   }
 

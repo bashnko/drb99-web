@@ -176,6 +176,15 @@ function ResultPageContent() {
       };
 
       if (activeDistributor === "npm_wrapper") {
+        // Map form platform IDs (linux/darwin/windows) to API format (linux-amd64/darwin-arm64/windows-amd64)
+        const assetUrls: Record<string, string[]> = {};
+        for (const platform of npmWrapperData.platforms) {
+          const urls = (npmWrapperData.assetUrls[platform] || []).filter(u => u.trim() !== "");
+          if (urls.length > 0) {
+            assetUrls[mapPlatform(platform)] = urls;
+          }
+        }
+
         Object.assign(payload, {
           binary_name: npmWrapperData.cliCommandName,
           package_name: npmWrapperData.packageName,
@@ -184,12 +193,7 @@ function ResultPageContent() {
           version: npmWrapperData.version,
           platforms: mapPlatformsList(npmWrapperData.platforms),
           mode: "manual",
-          asset_urls: Object.fromEntries(
-            npmWrapperData.platforms.map((platform) => [
-              mapPlatform(platform),
-              npmWrapperData.assetUrls[platform] ?? "",
-            ])
-          ),
+          asset_urls: assetUrls,
         });
       }
 

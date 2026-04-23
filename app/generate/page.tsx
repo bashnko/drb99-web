@@ -24,22 +24,48 @@ function toUiPlatform(platform: string): string {
   return platform;
 }
 
-function toUiAssetUrls(assetUrls: Record<string, string> | undefined): Record<string, string> {
+function toUiAssetUrls(assetUrls: Record<string, string[]> | undefined): Record<string, string[]> {
   if (!assetUrls) {
     return {};
   }
 
-  return Object.entries(assetUrls).reduce<Record<string, string>>((accumulator, [platform, url]) => {
-    accumulator[toUiPlatform(platform)] = url;
-    return accumulator;
-  }, {});
+  const result: Record<string, string[]> = {};
+
+  Object.entries(assetUrls).forEach(([platform, urls]) => {
+    const uiOs = toUiPlatform(platform);
+
+    // Filter out non-binary files
+    const binaryUrls = (Array.isArray(urls) ? urls : [urls]).filter(url => {
+      if (typeof url !== "string" || !url.trim()) return false;
+      const lowerUrl = url.toLowerCase();
+      return !lowerUrl.endsWith('.txt') && 
+             !lowerUrl.endsWith('.sha256') && 
+             !lowerUrl.endsWith('.sha512') &&
+             !lowerUrl.endsWith('.sig') &&
+             !lowerUrl.includes('checksum');
+    });
+
+    if (binaryUrls.length > 0) {
+      if (!result[uiOs]) {
+        result[uiOs] = [];
+      }
+      result[uiOs].push(...binaryUrls);
+    }
+  });
+
+  return result;
 }
 
 function buildNpmData(repoUrl: string, prefill: PrefillResponse): NpmWrapperFormData {
   const binaryName = prefill.binary_name?.trim() ?? "";
-  const platforms = Array.isArray(prefill.platforms)
-    ? prefill.platforms.map((platform) => toUiPlatform(platform))
-    : [];
+  
+  const assetUrls = toUiAssetUrls(prefill.asset_urls);
+  let platforms = Object.keys(assetUrls);
+
+  // Fallback if no asset urls but platforms exist
+  if (platforms.length === 0 && Array.isArray(prefill.platforms)) {
+    platforms = prefill.platforms.map((platform) => toUiPlatform(platform));
+  }
 
   return {
     ...INITIAL_NPM_WRAPPER_DATA,
@@ -49,15 +75,15 @@ function buildNpmData(repoUrl: string, prefill: PrefillResponse): NpmWrapperForm
     license: prefill.license?.trim() || "MIT",
     description: prefill.description?.trim() ?? "",
     version: prefill.version?.trim() ?? "",
-    platforms,
-    assetUrls: toUiAssetUrls(prefill.asset_urls),
+    platforms: Array.from(new Set(platforms)),
+    assetUrls,
   };
 }
 
 function buildGoData(repoUrl: string, prefill: PrefillResponse): GoReleaseFormData {
   const binaryName = prefill.binary_name?.trim() ?? "";
   const platforms = Array.isArray(prefill.platforms)
-    ? prefill.platforms.map((platform) => toUiPlatform(platform))
+    ? prefill.platforms.map((platform) => `${toUiPlatform(platform)}-amd64`)
     : [];
 
   return {
@@ -66,7 +92,7 @@ function buildGoData(repoUrl: string, prefill: PrefillResponse): GoReleaseFormDa
     binaryName,
     packageName: prefill.package_name?.trim() || binaryName,
     description: prefill.description?.trim() ?? "",
-    platforms,
+    platforms: Array.from(new Set(platforms)),
   };
 }
 

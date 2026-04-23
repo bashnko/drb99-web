@@ -14,7 +14,7 @@ export interface NpmWrapperFormData {
   description: string;
   version: string;
   platforms: string[];
-  assetUrls: Record<string, string>;
+  assetUrls: Record<string, string[]>;
 }
 
 export const INITIAL_NPM_WRAPPER_DATA: NpmWrapperFormData = {
@@ -66,23 +66,38 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
   const togglePlatform = (platformId: PlatformId, checked: boolean) => {
     const platforms = checked
       ? [...new Set([...safeData.platforms, platformId])]
-      : safeData.platforms.filter((platform) => platform !== platformId);
+      : safeData.platforms.filter((p) => p !== platformId);
 
     const assetUrls = { ...safeData.assetUrls };
 
     if (checked && !(platformId in assetUrls)) {
-      assetUrls[platformId] = "";
+      assetUrls[platformId] = [""];
     }
 
-    onChange({
-      ...safeData,
-      platforms,
-      assetUrls,
-    });
+    if (!checked) {
+      delete assetUrls[platformId];
+    }
+
+    onChange({ ...safeData, platforms, assetUrls });
   };
 
-  const updateAssetUrl = (platformId: PlatformId, url: string) => {
-    update("assetUrls", { ...safeData.assetUrls, [platformId]: url });
+  const updateAssetUrl = (platformId: string, index: number, url: string) => {
+    const currentUrls = [...(safeData.assetUrls[platformId] ?? [""])];
+    currentUrls[index] = url;
+    update("assetUrls", { ...safeData.assetUrls, [platformId]: currentUrls });
+  };
+
+  const addAssetUrl = (platformId: string) => {
+    const currentUrls = [...(safeData.assetUrls[platformId] ?? [])];
+    currentUrls.push("");
+    update("assetUrls", { ...safeData.assetUrls, [platformId]: currentUrls });
+  };
+
+  const removeAssetUrl = (platformId: string, index: number) => {
+    const currentUrls = [...(safeData.assetUrls[platformId] ?? [])];
+    currentUrls.splice(index, 1);
+    if (currentUrls.length === 0) currentUrls.push("");
+    update("assetUrls", { ...safeData.assetUrls, [platformId]: currentUrls });
   };
 
   const selectedPlatforms = PLATFORM_OPTIONS.filter((platform) =>
@@ -208,26 +223,54 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
         {selectedPlatforms.length > 0 && (
           <div className="space-y-4 py-2">
             <Label className="text-zinc-400 text-sm">Platform Asset URLs</Label>
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-              {selectedPlatforms.map((platform) => (
-                <div key={platform.id} className="space-y-2.5">
-                  <Label
-                    htmlFor={`npm-asset-${platform.id}`}
-                    className="text-xs text-zinc-500"
-                  >
-                    {platform.label} URL
-                  </Label>
-                  <Input
-                    id={`npm-asset-${platform.id}`}
-                    placeholder={`https://.../${platform.id}-binary`}
-                    value={safeData.assetUrls[platform.id] ?? ""}
-                    onChange={(event) =>
-                      updateAssetUrl(platform.id, event.target.value)
-                    }
-                    className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-none transition-all"
-                  />
-                </div>
-              ))}
+            <div className="space-y-5">
+              {selectedPlatforms.map((platform) => {
+                const urls = safeData.assetUrls[platform.id] ?? [""];
+
+                return (
+                  <div key={platform.id} className="space-y-2.5">
+                    <Label className="text-xs text-zinc-500 uppercase tracking-wide">
+                      {platform.label}
+                    </Label>
+                    <div className="space-y-2">
+                      {urls.map((url, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Input
+                            placeholder={`https://.../${platform.id}-binary`}
+                            value={url}
+                            onChange={(event) =>
+                              updateAssetUrl(platform.id, index, event.target.value)
+                            }
+                            className="py-2.5 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-none transition-all flex-1"
+                          />
+                          {urls.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeAssetUrl(platform.id, index)}
+                              className="shrink-0 flex items-center justify-center w-8 h-8 border border-zinc-800 text-zinc-500 hover:text-red-400 hover:border-red-800 transition-colors"
+                              title="Remove URL"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => addAssetUrl(platform.id)}
+                        className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors mt-1"
+                      >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add URL
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
