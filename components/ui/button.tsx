@@ -20,25 +20,31 @@ const buttonSizes = {
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: keyof typeof buttonVariants;
   size?: keyof typeof buttonSizes;
+  ref?: React.Ref<HTMLButtonElement>;
 }
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "primary", size = "default", ...props }, ref) => {
-    return (
-      <button
-        className={cn(
-          "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-500 disabled:pointer-events-none disabled:opacity-50",
-          buttonVariants[variant],
-          buttonSizes[size],
-          className
-        )}
-        ref={ref}
-        {...props}
-      />
-    );
-  }
-);
-Button.displayName = "Button";
+function Button({
+  className,
+  variant = "primary",
+  size = "default",
+  disabled,
+  ref,
+  ...props
+}: ButtonProps) {
+  return (
+    <button
+      {...props}
+      className={cn(
+        "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-500 disabled:pointer-events-none disabled:opacity-50",
+        buttonVariants[variant],
+        buttonSizes[size],
+        className
+      )}
+      ref={ref}
+      disabled={disabled ? true : undefined}
+    />
+  );
+}
 
 export { Button };
 export type { ButtonProps };

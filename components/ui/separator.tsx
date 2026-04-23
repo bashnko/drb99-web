@@ -14,10 +14,11 @@ function Separator({
     <div
       role="separator"
       className={cn(
-        "shrink-0 bg-white/[0.08]",
+        "shrink-0",
         orientation === "horizontal" ? "h-px w-full" : "h-full w-px",
         className
       )}
+      style={{ background: "var(--border)", ...props.style }}
       {...props}
     />
   );

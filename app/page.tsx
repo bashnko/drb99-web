@@ -1,32 +1,56 @@
+"use client";
+
 import Link from "next/link";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function Home() {
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#050505] font-sans selection:bg-zinc-800">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_30%_40%,_rgba(255,255,255,0.06)_0%,_transparent_50%_,_rgba(0,0,0,0.9)_100%)]" />
+    <div
+      className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden font-sans selection:bg-zinc-800"
+      style={{ background: "var(--background)" }}
+    >
+      {/* Subtle radial gradient overlay */}
+      <div className="pointer-events-none absolute inset-0 -z-10 dark:bg-[radial-gradient(ellipse_at_30%_40%,_rgba(255,255,255,0.06)_0%,_transparent_50%_,_rgba(0,0,0,0.9)_100%)] bg-[radial-gradient(ellipse_at_30%_40%,_rgba(0,0,0,0.03)_0%,_transparent_50%)]" />
+
+      {/* Theme toggle – top right */}
+      <div className="absolute right-6 top-6 z-20">
+        <ThemeToggle />
+      </div>
 
       <main className="z-10 flex w-full max-w-5xl flex-col items-start justify-center px-8 md:px-12">
-        <div className="mb-8 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold tracking-widest text-zinc-300 backdrop-blur-md">
+        <div
+          className="mb-8 inline-flex items-center rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-widest backdrop-blur-md"
+          style={{
+            border: "1px solid var(--badge-border)",
+            background: "var(--badge-bg)",
+            color: "var(--muted-foreground)",
+          }}
+        >
           GO CLI PACKAGING TOOL
         </div>
 
-        <h1 className="max-w-4xl tracking-tighter text-white">
+        <h1 className="max-w-4xl tracking-tighter" style={{ color: "var(--foreground)" }}>
           <span className="block text-5xl font-semibold sm:text-6xl md:text-7xl lg:text-[5.5rem] lg:leading-[1.05]">
             Build in Go.
           </span>
-          <span className="block text-5xl font-medium text-zinc-500 sm:text-6xl md:text-7xl lg:text-[5.5rem] lg:leading-[1.05]">
+          <span className="block text-5xl font-medium sm:text-6xl md:text-7xl lg:text-[5.5rem] lg:leading-[1.05]" style={{ color: "var(--muted-foreground)" }}>
             Ship with npm.
           </span>
         </h1>
 
-        <p className="mt-8 max-w-2xl text-lg leading-relaxed text-zinc-400 opacity-90 sm:text-xl md:text-[22px] md:leading-9">
+        <p className="mt-8 max-w-2xl text-lg leading-relaxed opacity-90 sm:text-xl md:text-[22px] md:leading-9" style={{ color: "var(--muted-foreground)" }}>
           Turn your Go binaries into installable npm packages with the release wiring already handled.
         </p>
 
         <div className="mt-12 flex w-full flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-start">
           <Link
             href="/generate"
-            className="group flex h-12 w-full sm:w-auto items-center justify-center gap-2.5 rounded-full bg-white px-8 text-sm font-semibold text-black shadow-[0_0_40px_-15px_rgba(255,255,255,0.5)] transition-all hover:scale-[1.02] hover:bg-zinc-200 active:scale-95 sm:h-14"
+            className="group flex h-12 w-full items-center justify-center gap-2.5 rounded-full px-8 text-sm font-semibold transition-all hover:scale-[1.02] active:scale-95 sm:h-14 sm:w-auto"
+            style={{
+              background: "var(--btn-primary-bg)",
+              color: "var(--btn-primary-text)",
+              boxShadow: "0 0 40px -15px var(--btn-primary-shadow)",
+            }}
           >
             Start Generating
             <svg
@@ -41,7 +65,12 @@ export default function Home() {
           </Link>
           <Link
             href="#"
-            className="flex h-12 w-full sm:w-auto sm:h-14 items-center justify-center rounded-full border border-white/10 bg-white/5 px-8 text-sm font-medium text-zinc-300 transition-all hover:bg-white/10 hover:text-white active:scale-95"
+            className="flex h-12 w-full items-center justify-center rounded-full px-8 text-sm font-medium transition-all active:scale-95 sm:h-14 sm:w-auto"
+            style={{
+              border: "1px solid var(--badge-border)",
+              background: "var(--badge-bg)",
+              color: "var(--muted-foreground)",
+            }}
           >
             Learn More
           </Link>

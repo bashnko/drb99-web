@@ -14,6 +14,8 @@ import { generatePackage } from "@/lib/api";
 import { useAppContext, type DistributorType } from "@/lib/app-context";
 import { getDistributorLabel } from "@/components/forms/distributor-selector";
 import { mapPlatform, mapPlatformsList } from "@/lib/platforms";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { useTheme } from "@/components/theme-provider";
 
 interface GeneratedResult {
   files: Record<string, string>;
@@ -314,7 +316,7 @@ function ResultPageContent() {
     }
 
     return (
-      <div className="border border-zinc-800 bg-zinc-900 p-4 text-sm text-zinc-400">
+      <div className="p-4 text-sm" style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--muted-foreground)" }}>
         GitHub Actions generator has no extra form fields. Use Generate to create workflow files.
       </div>
     );
@@ -322,8 +324,8 @@ function ResultPageContent() {
 
   if (!repoUrl || distributors.length === 0 || !activeDistributor) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950">
-        <p className="text-zinc-500">Loading...</p>
+      <div className="flex min-h-screen items-center justify-center" style={{ background: "var(--background)" }}>
+        <p style={{ color: "var(--muted-foreground)" }}>Loading...</p>
       </div>
     );
   }
@@ -333,14 +335,15 @@ function ResultPageContent() {
   const selectedFile = currentViewState.activeFile || fileList[0] || "";
 
   return (
-    <div className="flex min-h-screen bg-zinc-950 text-zinc-100">
-      <aside className="w-64 shrink-0 border-r border-zinc-800">
-        <div className="flex h-12 items-center border-b border-zinc-800 px-3">
+    <div className="flex min-h-screen" style={{ background: "var(--background)", color: "var(--foreground)" }}>
+      <aside className="w-64 shrink-0" style={{ borderRight: "1px solid var(--border)", background: "var(--sidebar-bg)" }}>
+        <div className="flex h-12 items-center px-3" style={{ borderBottom: "1px solid var(--border)" }}>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => router.push("/generate")}
-            className="h-8 px-2 text-zinc-400 hover:text-white"
+            className="h-8 px-2"
+            style={{ color: "var(--btn-ghost-text)" }}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Generate
@@ -356,12 +359,15 @@ function ResultPageContent() {
               <button
                 key={distributor}
                 onClick={() => handleSidebarSelect(distributor)}
-                className={`flex h-14 w-full items-center justify-between border-b border-zinc-800 px-4 text-left text-sm ${
-                  isActive ? "bg-zinc-900 text-zinc-100" : "bg-transparent text-zinc-300 hover:bg-zinc-900"
-                }`}
+                className="flex h-14 w-full items-center justify-between px-4 text-left text-sm transition-colors"
+                style={{
+                  borderBottom: "1px solid var(--border)",
+                  background: isActive ? "var(--sidebar-active)" : "transparent",
+                  color: isActive ? "var(--foreground)" : "var(--muted-foreground)",
+                }}
               >
                 <span>{getDistributorLabel(distributor)}</span>
-                <span className={`h-1.5 w-1.5 ${generated ? "bg-emerald-400" : "bg-zinc-700"}`} />
+                <span className="h-1.5 w-1.5" style={{ background: generated ? "var(--dot-generated)" : "var(--dot-idle)" }} />
               </button>
             );
           })}
@@ -369,13 +375,13 @@ function ResultPageContent() {
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col">
-        <header className="border-b border-zinc-800 px-5 py-3">
+        <header className="px-5 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h1 className="text-sm font-medium uppercase tracking-wide text-zinc-300">
+              <h1 className="text-sm font-medium uppercase tracking-wide" style={{ color: "var(--muted-foreground)" }}>
                 {getDistributorLabel(activeDistributor)}
               </h1>
-              <p className="text-xs text-zinc-500">{repoUrl}</p>
+              <p className="text-xs" style={{ color: "var(--muted-foreground)", opacity: 0.7 }}>{repoUrl}</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -385,16 +391,18 @@ function ResultPageContent() {
                     variant="ghost"
                     size="sm"
                     onClick={handleCopy}
-                    className="h-8 gap-2 border border-zinc-700 text-zinc-300 hover:text-white"
+                    className="h-8 gap-2"
+                    style={{ border: "1px solid var(--input)", color: "var(--muted-foreground)" }}
                   >
-                    {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                    {copied ? <Check className="h-4 w-4" style={{ color: "var(--dot-generated)" }} /> : <Copy className="h-4 w-4" />}
                     {copied ? "Copied" : "Copy"}
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={handleToggleEditing}
-                    className="h-8 gap-2 border border-zinc-700 text-zinc-300 hover:text-white"
+                    className="h-8 gap-2"
+                    style={{ border: "1px solid var(--input)", color: "var(--muted-foreground)" }}
                   >
                     {currentViewState.isEditing ? <Pencil className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                     {currentViewState.isEditing ? "Editing" : "Read only"}
@@ -403,7 +411,8 @@ function ResultPageContent() {
                     variant="ghost"
                     size="sm"
                     onClick={handleDownloadZip}
-                    className="h-8 gap-2 border border-zinc-700 text-zinc-300 hover:text-white"
+                    className="h-8 gap-2"
+                    style={{ border: "1px solid var(--input)", color: "var(--muted-foreground)" }}
                   >
                     <DownloadCloud className="h-4 w-4" />
                     Download
@@ -411,10 +420,17 @@ function ResultPageContent() {
                 </>
               )}
 
+              <ThemeToggle />
+
               <Button
                 onClick={handleGenerateCurrent}
                 disabled={isGenerating}
-                className="h-8 border border-zinc-100 bg-zinc-100 px-4 text-zinc-900 hover:bg-white disabled:opacity-40"
+                className="h-8 px-4 disabled:opacity-40"
+                style={{
+                  background: "var(--btn-primary-bg)",
+                  color: "var(--btn-primary-text)",
+                  border: "1px solid var(--btn-primary-bg)",
+                }}
               >
                 {isGenerating ? "Generating..." : hasResult ? "Regenerate" : "Generate"}
               </Button>
@@ -423,13 +439,13 @@ function ResultPageContent() {
         </header>
 
         {prefillIssue && (
-          <div className="border-b border-amber-900 bg-amber-950/30 px-5 py-2 text-xs text-amber-300">
+          <div className="px-5 py-2 text-xs" style={{ borderBottom: "1px solid var(--warning-border)", background: "var(--warning-bg)", color: "var(--warning-text)" }}>
             Prefill notice: {prefillIssue}
           </div>
         )}
 
         {error && (
-          <div className="border-b border-red-900 bg-red-950/30 px-5 py-2 text-xs text-red-300">{error}</div>
+          <div className="px-5 py-2 text-xs" style={{ borderBottom: "1px solid var(--error-border)", background: "var(--error-bg)", color: "var(--error-text)" }}>{error}</div>
         )}
 
         <section className="flex min-h-0 flex-1">
@@ -437,8 +453,8 @@ function ResultPageContent() {
             <div className="w-full overflow-auto p-5">{renderForm()}</div>
           ) : (
             <>
-              <div className="w-64 shrink-0 border-r border-zinc-800">
-                <div className="border-b border-zinc-800 px-4 py-2 text-xs uppercase tracking-wide text-zinc-500">
+              <div className="w-64 shrink-0" style={{ borderRight: "1px solid var(--border)" }}>
+                <div className="px-4 py-2 text-xs uppercase tracking-wide" style={{ borderBottom: "1px solid var(--border)", color: "var(--muted-foreground)" }}>
                   Files
                 </div>
                 <div>
@@ -446,11 +462,12 @@ function ResultPageContent() {
                     <button
                       key={filename}
                       onClick={() => handleSelectFile(filename)}
-                      className={`flex h-10 w-full items-center gap-2 border-b border-zinc-800 px-3 text-left text-sm ${
-                        selectedFile === filename
-                          ? "bg-zinc-900 text-zinc-100"
-                          : "text-zinc-300 hover:bg-zinc-900"
-                      }`}
+                      className="flex h-10 w-full items-center gap-2 px-3 text-left text-sm transition-colors"
+                      style={{
+                        borderBottom: "1px solid var(--border)",
+                        background: selectedFile === filename ? "var(--sidebar-active)" : "transparent",
+                        color: selectedFile === filename ? "var(--foreground)" : "var(--muted-foreground)",
+                      }}
                     >
                       <FileCode2 className="h-4 w-4" />
                       <span className="truncate">{filename}</span>
@@ -460,19 +477,11 @@ function ResultPageContent() {
               </div>
 
               <div className="min-w-0 flex-1">
-                <Editor
-                  height="100%"
-                  language={getLanguage(selectedFile)}
-                  theme="vs-dark"
-                  value={getCurrentFileContent(currentViewState, selectedFile)}
-                  onMount={handleEditorMount}
-                  onChange={currentViewState.isEditing ? handleEditorChange : undefined}
-                  options={{
-                    automaticLayout: true,
-                    minimap: { enabled: false },
-                    readOnly: !currentViewState.isEditing,
-                    fontSize: 13,
-                  }}
+                <ThemedEditor
+                  selectedFile={selectedFile}
+                  currentViewState={currentViewState}
+                  handleEditorMount={handleEditorMount}
+                  handleEditorChange={currentViewState.isEditing ? handleEditorChange : undefined}
                 />
               </div>
             </>
@@ -483,11 +492,42 @@ function ResultPageContent() {
   );
 }
 
+function ThemedEditor({
+  selectedFile,
+  currentViewState,
+  handleEditorMount,
+  handleEditorChange,
+}: {
+  selectedFile: string;
+  currentViewState: DistributorViewState;
+  handleEditorMount: OnMount;
+  handleEditorChange: ((value: string | undefined) => void) | undefined;
+}) {
+  const { theme } = useTheme();
+
+  return (
+    <Editor
+      height="100%"
+      language={getLanguage(selectedFile)}
+      theme={theme === "dark" ? "vs-dark" : "light"}
+      value={getCurrentFileContent(currentViewState, selectedFile)}
+      onMount={handleEditorMount}
+      onChange={handleEditorChange}
+      options={{
+        automaticLayout: true,
+        minimap: { enabled: false },
+        readOnly: !currentViewState.isEditing,
+        fontSize: 13,
+      }}
+    />
+  );
+}
+
 export default function ResultPage() {
   return (
     <React.Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-500">
+        <div className="flex min-h-screen items-center justify-center" style={{ background: "var(--background)", color: "var(--muted-foreground)" }}>
           Loading result view...
         </div>
       }

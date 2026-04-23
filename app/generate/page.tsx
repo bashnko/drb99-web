@@ -13,6 +13,7 @@ import { INITIAL_GO_RELEASE_DATA, type GoReleaseFormData } from "@/components/fo
 import { INITIAL_NPM_WRAPPER_DATA, type NpmWrapperFormData } from "@/components/forms/npm-wrapper-form";
 import { prefillFormData } from "@/lib/api";
 import { useAppContext, type DistributorType, type PrefillResponse } from "@/lib/app-context";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 function toUiPlatform(platform: string): string {
   const value = platform.toLowerCase();
@@ -186,14 +187,15 @@ export default function GeneratePage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <header className="border-b border-zinc-800 px-4 py-4 sm:px-6">
+    <div className="min-h-screen text-[var(--foreground)]" style={{ background: "var(--background)" }}>
+      <header className="px-4 py-4 sm:px-6" style={{ borderBottom: "1px solid var(--header-border)" }}>
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2 text-zinc-400 hover:text-white"
+              className="h-8 px-2"
+              style={{ color: "var(--btn-ghost-text)" }}
               onClick={() => router.back()}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -202,28 +204,37 @@ export default function GeneratePage() {
             <h1 className="text-lg font-medium tracking-wide">DRB99</h1>
           </div>
 
-          <Button
-            onClick={handleContinue}
-            disabled={isContinuing || selectedDistributors.size === 0}
-            className="h-9 border border-zinc-100 bg-zinc-100 px-5 text-zinc-900 hover:bg-white disabled:opacity-40"
-          >
-            {isContinuing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Prefilling...
-              </>
-            ) : (
-              "Continue"
-            )}
-          </Button>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <Button
+              onClick={handleContinue}
+              disabled={Boolean(isContinuing || selectedDistributors.size === 0)}
+              className="h-9 px-5 transition-all duration-150 active:translate-x-[3px] active:translate-y-[3px] active:shadow-none disabled:opacity-40 disabled:shadow-none disabled:active:translate-x-0 disabled:active:translate-y-0"
+              style={{
+                background: "var(--btn-primary-bg)",
+                color: "var(--btn-primary-text)",
+                border: "1px solid var(--btn-primary-bg)",
+                boxShadow: `3px 3px 0px 0px var(--btn-primary-shadow)`,
+              }}
+            >
+              {isContinuing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Prefilling...
+                </>
+              ) : (
+                "Continue"
+              )}
+            </Button>
+          </div>
         </div>
       </header>
 
       <main className="px-4 py-5 sm:px-6">
-        <Card className="border-zinc-800 bg-zinc-950 rounded-none">
+        <Card className="rounded-none" style={{ border: "1px solid var(--border)", background: "var(--card)" }}>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium uppercase tracking-wide text-zinc-300">Repository URL</CardTitle>
-            <CardDescription className="text-zinc-500">This URL is used for prefill and generation context.</CardDescription>
+            <CardTitle className="text-sm font-medium uppercase tracking-wide" style={{ color: "var(--muted-foreground)" }}>Repository URL</CardTitle>
+            <CardDescription style={{ color: "var(--muted-foreground)", opacity: 0.7 }}>This URL is used for prefill and generation context.</CardDescription>
           </CardHeader>
           <CardContent>
             <Label htmlFor="repo-url" className="sr-only">
@@ -237,21 +248,26 @@ export default function GeneratePage() {
                 setRepoUrl(event.target.value);
                 setError(null);
               }}
-              className="h-11 border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-400 focus:ring-0 rounded-none"
+              className="h-11 rounded-none focus:ring-0"
+              style={{
+                border: "1px solid var(--input)",
+                background: "var(--surface)",
+                color: "var(--foreground)",
+              }}
             />
           </CardContent>
         </Card>
 
         <section className="mt-6">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-300">Distributors</h2>
-            <p className="text-xs text-zinc-500">Select one or more targets</p>
+            <h2 className="text-sm font-medium uppercase tracking-wide" style={{ color: "var(--muted-foreground)" }}>Distributors</h2>
+            <p className="text-xs" style={{ color: "var(--muted-foreground)", opacity: 0.7 }}>Select one or more targets</p>
           </div>
           <DistributorSelector selected={selectedDistributors} onChange={toggleDistributor} />
         </section>
 
         {error && (
-          <div className="mt-5 border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300">
+          <div className="mt-5 px-4 py-3 text-sm" style={{ border: "1px solid var(--error-border)", background: "var(--error-bg)", color: "var(--error-text)" }}>
             {error}
           </div>
         )}

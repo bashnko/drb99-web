@@ -33,6 +33,8 @@ interface NpmWrapperFormProps {
   onChange: (data: NpmWrapperFormData) => void;
 }
 
+const inputClasses = "py-3 px-4 h-auto rounded-none transition-all";
+
 export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
   const safeData: NpmWrapperFormData = {
     repoUrl: data.repoUrl ?? "",
@@ -108,62 +110,67 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
     <div className="space-y-8">
       <div className="grid gap-6 sm:grid-cols-3">
         <div className="space-y-2.5">
-          <Label htmlFor="npm-repo-url" className="text-zinc-400 text-sm">Repository URL</Label>
+          <Label htmlFor="npm-repo-url" className="text-sm" style={{ color: "var(--muted-foreground)" }}>Repository URL</Label>
           <Input
             id="npm-repo-url"
             placeholder="github.com/user/repo"
             value={safeData.repoUrl}
             onChange={(event) => update("repoUrl", event.target.value)}
-            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-none transition-all"
+            className={inputClasses}
+            style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--foreground)" }}
           />
         </div>
         <div className="space-y-2.5">
-          <Label htmlFor="npm-cli-command" className="text-zinc-400 text-sm">Binary Name</Label>
+          <Label htmlFor="npm-cli-command" className="text-sm" style={{ color: "var(--muted-foreground)" }}>Binary Name</Label>
           <Input
             id="npm-cli-command"
             placeholder="mytool"
             value={safeData.cliCommandName}
             onChange={(event) => updateCommandName(event.target.value)}
-            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-none transition-all"
+            className={inputClasses}
+            style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--foreground)" }}
           />
         </div>
         <div className="space-y-2.5">
-          <Label htmlFor="npm-version" className="text-zinc-400 text-sm">Version</Label>
+          <Label htmlFor="npm-version" className="text-sm" style={{ color: "var(--muted-foreground)" }}>Version</Label>
           <Input
             id="npm-version"
             placeholder="1.0.0"
             value={safeData.version}
             onChange={(event) => update("version", event.target.value)}
-            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-none transition-all"
+            className={inputClasses}
+            style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--foreground)" }}
           />
         </div>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2">
         <div className="space-y-2.5">
-          <Label htmlFor="npm-package-name" className="text-zinc-400 text-sm">Package Name</Label>
+          <Label htmlFor="npm-package-name" className="text-sm" style={{ color: "var(--muted-foreground)" }}>Package Name</Label>
           <Input
             id="npm-package-name"
             placeholder="mytool-cli"
             value={safeData.packageName}
             onChange={(event) => update("packageName", event.target.value)}
-            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-none transition-all"
+            className={inputClasses}
+            style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--foreground)" }}
           />
         </div>
         <div className="space-y-2.5">
-          <Label htmlFor="npm-license" className="text-zinc-400 text-sm">License (optional)</Label>
+          <Label htmlFor="npm-license" className="text-sm" style={{ color: "var(--muted-foreground)" }}>License (optional)</Label>
           <Input
             id="npm-license"
             placeholder="MIT"
             value={safeData.license}
             onChange={(event) => update("license", event.target.value)}
-            className="py-3 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-none transition-all"
+            className={inputClasses}
+            style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--foreground)" }}
           />
         </div>
       </div>
 
       <div className="space-y-2.5">
-        <Label htmlFor="npm-description" className="text-zinc-400 text-sm">Description (optional)</Label>
+        <Label htmlFor="npm-description" className="text-sm" style={{ color: "var(--muted-foreground)" }}>Description (optional)</Label>
         <textarea
           id="npm-description"
           placeholder={
@@ -174,19 +181,20 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
           value={safeData.description}
           onChange={(event) => update("description", event.target.value)}
           rows={6}
-          className={cn(
-            "w-full rounded-none border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white placeholder:text-zinc-500",
-            "focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500",
-            "transition-all resize-y"
-          )}
+          className="w-full rounded-none border px-4 py-3 text-sm transition-all resize-y focus:outline-none focus:ring-1"
+          style={{
+            background: "var(--surface)",
+            borderColor: "var(--border)",
+            color: "var(--foreground)",
+          }}
         />
       </div>
 
-      <Separator className="bg-zinc-800/50" />
+      <Separator style={{ background: "var(--border)" }} />
 
       <div className="space-y-6">
         <div className="space-y-3">
-          <Label className="text-zinc-400 text-sm">Target Platforms</Label>
+          <Label className="text-sm" style={{ color: "var(--muted-foreground)" }}>Target Platforms</Label>
           <div className="grid grid-cols-3 gap-4">
             {PLATFORM_OPTIONS.map((platform) => {
               const isChecked = safeData.platforms.includes(platform.id);
@@ -203,17 +211,16 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
                       togglePlatform(platform.id, !isChecked);
                     }
                   }}
-                  className={cn(
-                    "group flex cursor-pointer flex-col items-center justify-center rounded-none border p-4 transition-all outline-none focus-visible:ring-2 focus-visible:ring-zinc-400",
-                    isChecked
-                      ? "border-zinc-400 bg-zinc-800/50"
-                      : "border-zinc-800 bg-transparent hover:border-zinc-700 hover:bg-zinc-900/30"
-                  )}
+                  className="group flex cursor-pointer flex-col items-center justify-center rounded-none border p-4 transition-all outline-none focus-visible:ring-2"
+                  style={{
+                    borderColor: isChecked ? "var(--ring)" : "var(--border)",
+                    background: isChecked ? "var(--accent)" : "transparent",
+                  }}
                 >
                   {platform.id === "linux" && <img src="https://files.svgcdn.io/flat-color-icons/linux.svg" alt="Linux" className={cn("w-7 h-7 mb-3 transition-all", isChecked ? "opacity-100 drop-shadow-sm" : "opacity-50 grayscale group-hover:opacity-80 group-hover:grayscale-0")} />}
-                  {platform.id === "darwin" && <img src="https://files.svgcdn.io/qlementine-icons/mac-16.svg" alt="macOS" className={cn("w-7 h-7 mb-3 transition-all", isChecked ? "opacity-100 drop-shadow-sm invert" : "opacity-50 grayscale invert group-hover:opacity-80")} />}
+                  {platform.id === "darwin" && <img src="https://files.svgcdn.io/qlementine-icons/mac-16.svg" alt="macOS" className={cn("platform-icon-mac w-7 h-7 mb-3 transition-all", isChecked ? "opacity-100 drop-shadow-sm" : "opacity-50 grayscale group-hover:opacity-80")} />}
                   {platform.id === "windows" && <img src="https://files.svgcdn.io/devicon/windows8.svg" alt="Windows" className={cn("w-7 h-7 mb-3 transition-all", isChecked ? "opacity-100 drop-shadow-sm" : "opacity-50 grayscale group-hover:opacity-80 group-hover:grayscale-0")} />}
-                  <span className={cn("text-xs font-medium transition-colors", isChecked ? "text-white" : "text-zinc-500 group-hover:text-zinc-300")}>{platform.label}</span>
+                  <span className="text-xs font-medium transition-colors" style={{ color: isChecked ? "var(--foreground)" : "var(--muted-foreground)" }}>{platform.label}</span>
                 </div>
               );
             })}
@@ -222,14 +229,14 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
 
         {selectedPlatforms.length > 0 && (
           <div className="space-y-4 py-2">
-            <Label className="text-zinc-400 text-sm">Platform Asset URLs</Label>
+            <Label className="text-sm" style={{ color: "var(--muted-foreground)" }}>Platform Asset URLs</Label>
             <div className="space-y-5">
               {selectedPlatforms.map((platform) => {
                 const urls = safeData.assetUrls[platform.id] ?? [""];
 
                 return (
                   <div key={platform.id} className="space-y-2.5">
-                    <Label className="text-xs text-zinc-500 uppercase tracking-wide">
+                    <Label className="text-xs uppercase tracking-wide" style={{ color: "var(--muted-foreground)", opacity: 0.7 }}>
                       {platform.label}
                     </Label>
                     <div className="space-y-2">
@@ -241,13 +248,15 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
                             onChange={(event) =>
                               updateAssetUrl(platform.id, index, event.target.value)
                             }
-                            className="py-2.5 px-4 h-auto bg-zinc-900/50 border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 text-white rounded-none transition-all flex-1"
+                            className="py-2.5 px-4 h-auto rounded-none transition-all flex-1"
+                            style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--foreground)" }}
                           />
                           {urls.length > 1 && (
                             <button
                               type="button"
                               onClick={() => removeAssetUrl(platform.id, index)}
-                              className="shrink-0 flex items-center justify-center w-8 h-8 border border-zinc-800 text-zinc-500 hover:text-red-400 hover:border-red-800 transition-colors"
+                              className="shrink-0 flex items-center justify-center w-8 h-8 border transition-colors hover:text-red-500"
+                              style={{ borderColor: "var(--border)", color: "var(--muted-foreground)" }}
                               title="Remove URL"
                             >
                               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -260,7 +269,8 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
                       <button
                         type="button"
                         onClick={() => addAssetUrl(platform.id)}
-                        className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors mt-1"
+                        className="flex items-center gap-1.5 text-xs transition-colors mt-1"
+                        style={{ color: "var(--muted-foreground)" }}
                       >
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />

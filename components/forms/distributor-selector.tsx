@@ -46,12 +46,15 @@ export function DistributorSelector({ selected, onChange }: DistributorSelectorP
           <button
             key={distributor.id}
             onClick={() => onChange(distributor.id)}
-            className={cn(
-              "group flex min-h-32 flex-col justify-between border px-4 py-4 text-left transition-colors",
-              isSelected
-                ? "border-zinc-500 bg-zinc-900 text-zinc-100"
-                : "border-zinc-800 bg-zinc-950 text-zinc-100 hover:border-zinc-500"
-            )}
+            className="group flex min-h-32 flex-col justify-between border px-4 py-4 text-left transition-all duration-150 cursor-pointer active:translate-x-[3px] active:translate-y-[3px] active:shadow-none"
+            style={{
+              borderColor: isSelected ? "var(--ring)" : "var(--border)",
+              background: isSelected ? "var(--surface)" : "var(--card)",
+              color: "var(--foreground)",
+              boxShadow: isSelected
+                ? "3px 3px 0px 0px var(--ring)"
+                : "none",
+            }}
           >
             <div className="flex items-start justify-between gap-3">
               <img
@@ -63,27 +66,21 @@ export function DistributorSelector({ selected, onChange }: DistributorSelectorP
                 )}
               />
               <span
-                className={cn(
-                  "inline-block border px-1.5 py-0.5 text-[10px] uppercase tracking-wide",
-                  isSelected
-                    ? "border-zinc-500 text-zinc-300"
-                    : "border-zinc-700 text-zinc-500 group-hover:border-zinc-500"
-                )}
+                className="inline-block border px-1.5 py-0.5 text-[10px] uppercase tracking-wide"
+                style={{
+                  borderColor: isSelected ? "var(--ring)" : "var(--input)",
+                  color: "var(--muted-foreground)",
+                }}
               >
                 {isSelected ? "Selected" : "Select"}
               </span>
             </div>
 
             <div className="text-left">
-              <h3
-                className={cn(
-                  "text-sm font-medium transition-colors",
-                  isSelected ? "text-zinc-100" : "text-zinc-100"
-                )}
-              >
+              <h3 className="text-sm font-medium transition-colors" style={{ color: "var(--foreground)" }}>
                 {distributor.label}
               </h3>
-              <p className={cn("mt-1 text-xs", isSelected ? "text-zinc-400" : "text-zinc-500")}>
+              <p className="mt-1 text-xs" style={{ color: "var(--muted-foreground)" }}>
                 {distributor.description}
               </p>
             </div>

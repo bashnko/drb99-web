@@ -1,8 +1,81 @@
 @import "tailwindcss";
 
+/* ── Light-mode tokens (default) ── */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #a1a1aa;
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+  --surface: #fafafa;
+  --surface-hover: #f4f4f5;
+  --header-border: #e4e4e7;
+  --badge-bg: rgba(0, 0, 0, 0.05);
+  --badge-text: #3f3f46;
+  --badge-border: rgba(0, 0, 0, 0.08);
+  --error-bg: #fef2f2;
+  --error-border: #fecaca;
+  --error-text: #b91c1c;
+  --warning-bg: #fffbeb;
+  --warning-border: #fde68a;
+  --warning-text: #92400e;
+  --btn-primary-bg: #18181b;
+  --btn-primary-text: #ffffff;
+  --btn-primary-hover: #27272a;
+  --btn-primary-shadow: rgba(24, 24, 27, 0.5);
+  --btn-ghost-text: #71717a;
+  --btn-ghost-hover: #18181b;
+  --sidebar-bg: #fafafa;
+  --sidebar-active: #f4f4f5;
+  --dot-generated: #10b981;
+  --dot-idle: #d4d4d8;
+  --editor-bg: #ffffff;
+  --code-header-bg: #f4f4f5;
+}
+
+/* ── Dark-mode tokens ── */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+  --card: #0a0a0a;
+  --card-foreground: #ededed;
+  --border: #27272a;
+  --input: #3f3f46;
+  --ring: #52525b;
+  --accent: #27272a;
+  --accent-foreground: #fafafa;
+  --surface: #18181b;
+  --surface-hover: #27272a;
+  --header-border: #27272a;
+  --badge-bg: rgba(255, 255, 255, 0.05);
+  --badge-text: #d4d4d8;
+  --badge-border: rgba(255, 255, 255, 0.1);
+  --error-bg: rgba(127, 29, 29, 0.3);
+  --error-border: #7f1d1d;
+  --error-text: #fca5a5;
+  --warning-bg: rgba(120, 53, 15, 0.3);
+  --warning-border: #78350f;
+  --warning-text: #fcd34d;
+  --btn-primary-bg: #f4f4f5;
+  --btn-primary-text: #18181b;
+  --btn-primary-hover: #ffffff;
+  --btn-primary-shadow: rgba(244, 244, 245, 0.7);
+  --btn-ghost-text: #a1a1aa;
+  --btn-ghost-hover: #ffffff;
+  --sidebar-bg: #0a0a0a;
+  --sidebar-active: #18181b;
+  --dot-generated: #34d399;
+  --dot-idle: #3f3f46;
+  --editor-bg: #1e1e1e;
+  --code-header-bg: #18181b;
 }
 
 @theme inline {
@@ -16,15 +89,103 @@ html {
   color-scheme: dark;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html.light {
+  color-scheme: light;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ── Theme Toggle Button ── */
+.theme-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--muted-foreground);
+}
+
+.theme-toggle:hover {
+  background: var(--surface-hover);
+  color: var(--foreground);
+  border-color: var(--input);
+}
+
+.theme-toggle-sun,
+.theme-toggle-moon {
+  width: 18px;
+  height: 18px;
+  position: absolute;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s ease;
+}
+
+/* Dark mode: show moon, hide sun */
+.dark .theme-toggle-sun {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0);
+}
+
+.dark .theme-toggle-moon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+/* Light mode: show sun, hide moon */
+.light .theme-toggle-sun,
+:root:not(.dark) .theme-toggle-sun {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+.light .theme-toggle-moon,
+:root:not(.dark) .theme-toggle-moon {
+  opacity: 0;
+  transform: rotate(90deg) scale(0);
+}
+
+/* ── Light-mode overrides for form inputs with hardcoded dark classes ── */
+.light input,
+.light textarea,
+.light select {
+  background: var(--surface) !important;
+  color: var(--foreground) !important;
+  border-color: var(--input) !important;
+}
+
+.light input::placeholder,
+.light textarea::placeholder {
+  color: var(--muted-foreground) !important;
+  opacity: 0.6;
+}
+
+.light input:focus,
+.light textarea:focus,
+.light select:focus {
+  border-color: var(--ring) !important;
+}
+
+/* ── Platform macOS icon: invert only in dark mode ── */
+.dark .platform-icon-mac {
+  filter: invert(1);
+}
+
+.light .platform-icon-mac {
+  filter: none;
+}
+
+/* ── Light-mode label overrides for hardcoded zinc classes ── */
+.light label {
+  color: var(--muted-foreground) !important;
 }
