@@ -42,6 +42,7 @@ function Button({
       )}
       ref={ref}
       disabled={disabled ? true : undefined}
+      suppressHydrationWarning
     />
   );
 }

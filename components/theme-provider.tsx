@@ -37,10 +37,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (!mounted) return;
 
     const root = document.documentElement;
+
+    // Enable smooth transition on all elements
+    root.classList.add("theme-transitioning");
+
+    // Switch the theme
     root.classList.remove("light", "dark");
     root.classList.add(theme);
     root.style.colorScheme = theme;
     localStorage.setItem(STORAGE_KEY, theme);
+
+    // Remove transition class after animation completes
+    const timeout = setTimeout(() => {
+      root.classList.remove("theme-transitioning");
+    }, 500);
+
+    return () => clearTimeout(timeout);
   }, [theme, mounted]);
 
   const toggleTheme = React.useCallback(() => {

@@ -72,13 +72,12 @@ export function NpmWrapperForm({ data, onChange }: NpmWrapperFormProps) {
 
     const assetUrls = { ...safeData.assetUrls };
 
+    // Only add empty entry for newly selected platforms that have no stored URLs
     if (checked && !(platformId in assetUrls)) {
       assetUrls[platformId] = [""];
     }
 
-    if (!checked) {
-      delete assetUrls[platformId];
-    }
+    // Keep URLs in state when unchecked — they come back if re-selected
 
     onChange({ ...safeData, platforms, assetUrls });
   };

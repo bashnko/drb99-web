@@ -359,7 +359,7 @@ function ResultPageContent() {
               <button
                 key={distributor}
                 onClick={() => handleSidebarSelect(distributor)}
-                className="flex h-14 w-full items-center justify-between px-4 text-left text-sm transition-colors"
+                className="sidebar-nav-item flex h-14 w-full items-center justify-between px-4 text-left text-sm cursor-pointer transition-all duration-150"
                 style={{
                   borderBottom: "1px solid var(--border)",
                   background: isActive ? "var(--sidebar-active)" : "transparent",
@@ -422,18 +422,21 @@ function ResultPageContent() {
 
               <ThemeToggle />
 
-              <Button
-                onClick={handleGenerateCurrent}
-                disabled={isGenerating}
-                className="h-8 px-4 disabled:opacity-40"
-                style={{
-                  background: "var(--btn-primary-bg)",
-                  color: "var(--btn-primary-text)",
-                  border: "1px solid var(--btn-primary-bg)",
-                }}
-              >
-                {isGenerating ? "Generating..." : hasResult ? "Regenerate" : "Generate"}
-              </Button>
+              {!hasResult && (
+                <Button
+                  onClick={handleGenerateCurrent}
+                  disabled={isGenerating}
+                  className="h-9 px-5 transition-all duration-150 active:translate-x-[3px] active:translate-y-[3px] active:shadow-none disabled:opacity-40 disabled:shadow-none disabled:active:translate-x-0 disabled:active:translate-y-0"
+                  style={{
+                    background: "var(--btn-primary-bg)",
+                    color: "var(--btn-primary-text)",
+                    border: "1px solid var(--btn-primary-bg)",
+                    boxShadow: "3px 3px 0px 0px var(--btn-primary-shadow)",
+                  }}
+                >
+                  {isGenerating ? "Generating..." : "Generate"}
+                </Button>
+              )}
             </div>
           </div>
         </header>
@@ -462,7 +465,7 @@ function ResultPageContent() {
                     <button
                       key={filename}
                       onClick={() => handleSelectFile(filename)}
-                      className="flex h-10 w-full items-center gap-2 px-3 text-left text-sm transition-colors"
+                      className="sidebar-nav-item flex h-10 w-full items-center gap-2 px-3 text-left text-sm cursor-pointer transition-all duration-150"
                       style={{
                         borderBottom: "1px solid var(--border)",
                         background: selectedFile === filename ? "var(--sidebar-active)" : "transparent",
